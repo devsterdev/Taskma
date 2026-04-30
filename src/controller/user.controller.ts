@@ -1,8 +1,37 @@
 import 'dotenv/config'
-import { createUser, findUserByEmail } from "../db/user.db.js"
+import { createUser, findUserByEmail, updateUser } from "../db/user.db.js"
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken'
+
+const getJwtSecrets = () => {
+  const accessTokenSecret = process.env.JWT_SECRET_KEY;
+  const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET_KEY || accessTokenSecret;
+
+  if (!accessTokenSecret || !refreshTokenSecret) {
+    throw new Error("JWT secrets are not defined in environment variables");
+  }
+
+  return { accessTokenSecret, refreshTokenSecret };
+}
+
+const generateAccessAndRefreshTokens = (userId: number) => {
+  const { accessTokenSecret, refreshTokenSecret } = getJwtSecrets();
+
+  const accessToken = jwt.sign(
+    { userId },
+    accessTokenSecret,
+    { expiresIn: "1h" }
+  );
+
+  const refreshToken = jwt.sign(
+    { userId },
+    refreshTokenSecret,
+    { expiresIn: "7d" }
+  );
+
+  return { accessToken, refreshToken };
+}
 
 
 const registerUser = async (req: Request, res: Response) => {
@@ -25,37 +54,33 @@ const registerUser = async (req: Request, res: Response) => {
   
   try{
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await createUser({
       email, 
       username,
       name,
-      password: hashedPassword
+      password: hashedPassword,
+      refreshToken: ""
     })
 
-    const JWT_SECRET = process.env.JWT_SECRET_KEY;
-    if (!JWT_SECRET) {
-      throw new Error("JWT_SECRET_KEY is not defined in environment variables");
-    }
-    
-    const token = jwt.sign(
-      { userId: user.id },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-      
-    )
-    const { password: _, ...safeUser } = user;
+    const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user.id);
+    const safeUser = await updateUser(user.id, refreshToken);
 
     return res.status(201).json({
-      token,
+      accessToken,
+      refreshToken,
       message: "User created successfully",
       user: safeUser,
     });
   }
   catch (e: any) {
+    console.error("Register user error:", e);
+
     if (e.code === "P2002") {
-      return res.status(400).json({
-        message: "Duplicate field (email or username)",
-      });
+      return res.status(400).
+        json({
+          message: "Duplicate field (email or username)",
+        });
     }
 
     return res.status(500).json({
@@ -63,8 +88,6 @@ const registerUser = async (req: Request, res: Response) => {
     });
   }
 
-  
-  
 }
 
 const signInUser = async(req: Request, res: Response) => {
@@ -91,27 +114,20 @@ const signInUser = async(req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET_KEY;
-    if (!JWT_SECRET) {
-      throw new Error("JWT_SECRET_KEY is not defined in environment variables");
-    }
-      
-    const token = jwt.sign(
-      { userId: existedUser.id },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    )
-
-    const { password: _, ...safeUser } = existedUser;
+    const { accessToken, refreshToken } = generateAccessAndRefreshTokens(existedUser.id);
+    const safeUser = await updateUser(existedUser.id, refreshToken);
 
     return res.status(200).json({
-      token,
+      accessToken,
+      refreshToken,
       message: "User signin successfully",
       user: safeUser,
     });
 
   }
   catch(e: any){
+    console.error("Signin user error:", e);
+
     return res.status(500).json({
       message: "user not able to login",
     });
@@ -119,6 +135,28 @@ const signInUser = async(req: Request, res: Response) => {
   
 }
 
+const logOutUser = async(req: Request, res: Response) => {
+  try {
+    const user = (req as Request & { user?: { id: number } }).user;
+
+    if (!user?.id) {
+      return res.status(401).json({
+        message: "Unauthorized request"
+      });
+    }
+
+    await updateUser(user.id, "");
+
+    return res.status(200).json({
+      message: "User logged out successfully"
+    });
+  } catch (e: any) {
+    return res.status(500).json({
+      message: "Unable to logout user"
+    });
+  }
+}
 
 
-export {registerUser, signInUser}
+
+export {registerUser, signInUser, logOutUser}

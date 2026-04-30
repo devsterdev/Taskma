@@ -13,7 +13,8 @@ model User{
   name      String
   password  String
   createdAt DateTime @default(now())
-  todo     Todo[]
+  refreshToken       String
+  todo      Todo[]
 }
 
 model Todo{

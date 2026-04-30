@@ -7,6 +7,7 @@ type CreateUserInput = {
   username: string;
   name: string;
   password: string;
+  refreshToken: string
 };
 
 const adapter = new PrismaPg({
@@ -24,5 +25,35 @@ export const findUserByEmail = (email: string) => {
 export const createUser = (data: CreateUserInput) => {
   return client.user.create({
     data
+  })
+}
+
+export const findUserByUserId = (id: number) => {
+  return client.user.findUnique({
+    where: {id},
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      name: true,
+      createdAt: true,
+      refreshToken: true
+    }
+  })
+}
+
+export const updateUser = (id: number, refreshToken: string) => {
+  return client.user.update({
+    where: {id},
+    data: {
+      refreshToken
+    },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      name: true,
+      createdAt: true
+    }
   })
 }
