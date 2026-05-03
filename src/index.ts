@@ -11,9 +11,11 @@ app.get('/', (req, res) => {
 })
 
 import userRouter from './routes/user.routes.js'
+import todoRouter from './routes/todo.routes.js'
 
 
 app.use('/user', userRouter)
+app.use('/todo', todoRouter)
 
 
 

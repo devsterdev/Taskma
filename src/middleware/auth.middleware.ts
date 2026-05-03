@@ -34,7 +34,6 @@ export const verifyJWT = async (req: Request, res: Response, next:NextFunction) 
         })
     }
 
-    // @ts-ignore
     req.user = user
     next()
   }
