@@ -20,3 +20,16 @@ export const createTodo = (data: Prisma.TodoCreateInput) => {
     data
   })
 }
+
+export const getTodos = (id: number) =>  {
+  return client.todo.findMany({
+    where: {userId: id}
+  })
+}
+
+export const findTodoAndUpdate = (id: number, updates: any) => {
+  return client.todo.update({
+    where: {id},
+    data: updates
+  })
+}
