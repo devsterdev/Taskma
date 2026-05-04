@@ -1,4 +1,4 @@
-import type { findUserByUserId } from "../db/user.db.js";
+import type { findUserByUserId } from "../db/user.db.ts";
 
 declare global {
   namespace Express {
