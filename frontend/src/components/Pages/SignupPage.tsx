@@ -15,7 +15,62 @@ const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth'
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+const genderOptions = [
+  'Male',
+  'Female',
+  'Non-binary',
+  'Genderqueer',
+  'Agender',
+  'Bigender',
+  'Genderfluid',
+  'Two-spirit',
+  'Transgender Male',
+  'Transgender Female',
+  'Cisgender Male',
+  'Cisgender Female',
+  'Androgynous',
+  'Neutrois',
+  'Pangender',
+  'Trigender',
+  'Gender nonconforming',
+  'Demiboy',
+  'Demigirl',
+  'Gender variant',
+  'Third gender',
+  'Hijra',
+  'Kathoey',
+  "Fa'afafine",
+  'Māhū',
+  'Bakla',
+  'Waria',
+  'Xanith',
+  'Mukhannathun',
+  'Intersex',
+  'Transmasculine',
+  'Transfeminine',
+  'Questioning',
+  'Gender neutral',
+  'Gender expansive',
+  'Gender creative',
+  'Gender diverse',
+  'Non-binary femme',
+  'Non-binary masc',
+  'Demigender',
+  'Apagender',
+  'Graygender',
+  'Polygender',
+  'Omnigender',
+  'Aliagender',
+  'Novigender',
+  'Multigender',
+  'Genderflux',
+  'Cassgender',
+  'Maverique',
+  'Prefer not to say',
+  'Other'
+];
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -162,6 +217,31 @@ const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth'
               </div>
             )}
 
+            {/* Gender Field - Only for Signup */}
+            {isSignup && (
+              <div>
+                <label htmlFor="gender" className="block text-black font-medium mb-2">
+                  Gender <span className='text-[10px]'>*optional</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="gender"
+                    name="gender"
+                    className={`w-full pl-4 pr-4 py-2 border-2 ${
+                      errors.gender ? 'border-red-500' : 'border-black'
+                    } rounded-lg focus:outline-none focus:border-black bg-white text-black`}
+                  >
+                    <option value="">Select your gender</option>
+                    {genderOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-black font-medium mb-2">
@@ -262,7 +342,7 @@ const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth'
               <button
                 onClick={() => {
                   setIsSignup(!isSignup)
-                  setFormData({ name: '', email: '', password: '', confirmPassword: '' })
+                  setFormData({ name: '', email: '', password: '', confirmPassword: ''})
                   setErrors({})
                 }}
                 className="font-bold text-black hover:text-gray-700 underline"

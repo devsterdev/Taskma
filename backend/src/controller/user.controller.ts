@@ -103,7 +103,7 @@ const signInUser = async(req: Request, res: Response) => {
     const existedUser = await findUserByEmail(email)
     if(!existedUser){
       return res.json({
-        mesaage: "User don't exist"
+        message: "User don't exist"
       })
     }
 
