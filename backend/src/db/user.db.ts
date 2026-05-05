@@ -4,7 +4,6 @@ import { PrismaClient } from '@prisma/client'
 
 type CreateUserInput = {
   email: string;
-  username: string;
   name: string;
   password: string;
   refreshToken: string
@@ -34,7 +33,6 @@ export const findUserByUserId = (id: number) => {
     select: {
       id: true,
       email: true,
-      username: true,
       name: true,
       createdAt: true,
       refreshToken: true
@@ -51,7 +49,6 @@ export const updateUser = (id: number, refreshToken: string) => {
     select: {
       id: true,
       email: true,
-      username: true,
       name: true,
       createdAt: true
     }

@@ -1,14 +1,13 @@
 import React, { useState } from 'react'
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
 
-const SignupPage = () => {
+const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth') => void }) => {
   const [isSignup, setIsSignup] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -37,12 +36,6 @@ const SignupPage = () => {
       newErrors.name = 'Name is required'
     }
 
-    if (isSignup && !formData.username.trim()) {
-      newErrors.username = 'Username is required'
-    } else if (isSignup && formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters'
-    }
-
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -62,7 +55,7 @@ const SignupPage = () => {
     return newErrors
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors = validateForm()
 
@@ -71,8 +64,66 @@ const SignupPage = () => {
       return
     }
 
-    console.log('Form submitted:', isSignup ? 'Signup' : 'Signin', formData)
-    alert(`${isSignup ? 'Signup' : 'Signin'} successful!`)
+    if (isSignup) {
+      await registerUser();
+    } else {
+      await signInUser();
+    }
+  }
+
+  const registerUser = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/user/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        localStorage.setItem("accessToken", data.accessToken);
+        alert('Registration successful!')
+        setCurrentPage('home')
+      } else {
+        alert(data.message || 'Registration failed. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error during registration:', error)
+      alert('An error occurred. Please try again later.')
+    }
+  }
+
+  const signInUser = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/user/signIn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        localStorage.setItem("accessToken", data.accessToken);
+        alert('Sign in successful!')
+        setCurrentPage('home')
+      } else {
+        alert(data.message || 'Sign in failed. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error during sign in:', error)
+      alert('An error occurred. Please try again later.')
+    }
   }
 
   return (
@@ -108,30 +159,6 @@ const SignupPage = () => {
                   />
                 </div>
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-              </div>
-            )}
-
-            {/* Username Field - Only for Signup */}
-            {isSignup && (
-              <div>
-                <label htmlFor="username" className="block text-black font-medium mb-2">
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 text-black" size={20} />
-                  <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    placeholder="Choose a username"
-                    className={`w-full pl-10 pr-4 py-2 border-2 ${
-                      errors.username ? 'border-red-500' : 'border-black'
-                    } rounded-lg focus:outline-none focus:border-black bg-white text-black placeholder-gray-500`}
-                  />
-                </div>
-                {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
               </div>
             )}
 
@@ -235,7 +262,7 @@ const SignupPage = () => {
               <button
                 onClick={() => {
                   setIsSignup(!isSignup)
-                  setFormData({ name: '', username: '', email: '', password: '', confirmPassword: '' })
+                  setFormData({ name: '', email: '', password: '', confirmPassword: '' })
                   setErrors({})
                 }}
                 className="font-bold text-black hover:text-gray-700 underline"

@@ -7,12 +7,11 @@ function App() {
 
   return (
     <div>
-      {/* {currentPage === 'auth' ? (
-        <SignupPage />
+      {currentPage === 'auth' ? (
+        <SignupPage setCurrentPage={setCurrentPage} />
       ) : (
         <Home />
-      )} */}
-      <Home />
+      )}
     </div>
   )
 }

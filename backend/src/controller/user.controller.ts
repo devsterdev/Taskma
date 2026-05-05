@@ -35,10 +35,10 @@ const generateAccessAndRefreshTokens = (userId: number) => {
 
 
 const registerUser = async (req: Request, res: Response) => {
-  const {email, username, name, password} = req.body
+  const {email, name, password} = req.body
 
   if (
-    [email, username, name, password].some((field) => field?.trim() === "")
+    [email, name, password].some((field) => field?.trim() === "")
   ) {
     return res.status(400).
       json({
@@ -57,7 +57,6 @@ const registerUser = async (req: Request, res: Response) => {
 
     const user = await createUser({
       email, 
-      username,
       name,
       password: hashedPassword,
       refreshToken: ""
@@ -79,7 +78,7 @@ const registerUser = async (req: Request, res: Response) => {
     if (e.code === "P2002") {
       return res.status(400).
         json({
-          message: "Duplicate field (email or username)",
+          message: "Duplicate field (email)",
         });
     }
 
