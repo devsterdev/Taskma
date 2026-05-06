@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { apiCall } from '../../utils/api'
 
 const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth') => void }) => {
   const [isSignup, setIsSignup] = useState(true)
@@ -128,11 +129,8 @@ const genderOptions = [
 
   const registerUser = async () => {
     try {
-      const response = await fetch('http://localhost:3000/user/register', {
+      const response = await apiCall('/user/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -156,11 +154,8 @@ const genderOptions = [
 
   const signInUser = async () => {
     try {
-      const response = await fetch('http://localhost:3000/user/signIn', {
+      const response = await apiCall('/user/signIn', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password

@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Check, Plus, Star, Menu } from 'lucide-react'
 import Navbar from '../Navbar'
+import { apiCall } from '../../utils/api'
 
 interface Task {
   id: number
@@ -9,7 +10,7 @@ interface Task {
   isToday: boolean
 }
 
-const Home = () => {
+const Home = ({ onLogout }: { onLogout: () => void }) => {
   const [tasks, setTasks] = useState<Task[]>([
     { id: 1, title: 'I have four option to shift in Linux', completed: false, isToday: false },
     { id: 2, title: 'Exam phase being most productive phase', completed: false, isToday: false },
@@ -34,6 +35,23 @@ const Home = () => {
   const [completedTasks, setCompletedTasks] = useState<number[]>([])
   const [isDarkMode, setIsDarkMode] = useState(false)
 
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await apiCall('/todo/getTodos', {
+          method: 'GET',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setTasks(data);
+        }
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+      }
+    };
+    fetchTasks();
+  }, []);
+
   const tags = ['All tasks', 'Starred', 'My Tasks', 'Today']
 
   const handleTaskComplete = (id: number) => {
@@ -56,7 +74,7 @@ const Home = () => {
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'}`}>
       {/* NAVBAR */}
-      <Navbar isDarkMode={isDarkMode} onThemeToggle={setIsDarkMode} />
+      <Navbar isDarkMode={isDarkMode} onThemeToggle={setIsDarkMode} onLogout={onLogout} />
 
       {/* MAIN CONTENT */}
       <div className="flex flex-1 overflow-hidden">

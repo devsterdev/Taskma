@@ -4,9 +4,10 @@ import { Moon, Sun, User, Github } from 'lucide-react'
 interface NavbarProps {
   isDarkMode?: boolean
   onThemeToggle?: (isDark: boolean) => void
+  onLogout?: () => void
 }
 
-const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle }) => {
+const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle, onLogout }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const handleThemeToggle = () => {
@@ -132,6 +133,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle }) =>
               </button>
 
               <button
+                onClick={onLogout}
                 className={`w-full text-left px-4 py-3 transition-colors border-t ${
                   isDarkMode
                     ? 'border-white hover:bg-white hover:text-black text-white'
