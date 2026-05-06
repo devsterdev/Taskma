@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Check, Plus, Menu, X } from 'lucide-react'
+import { apiCall } from '../utils/api'
 
 interface Task {
   id: number
@@ -13,16 +14,16 @@ interface AllTasksProps {
   selectedTag: string
   allTasks: Task[]
   isDarkMode: boolean
-  completedTasks: number[]
-  handleTaskComplete: (id: number) => void
+  handleTaskComplete: (task: Task) => Promise<void>
+  onTaskCreated: () => Promise<void>
 }
 
 const AllTasks: React.FC<AllTasksProps> = ({
   selectedTag,
   allTasks,
   isDarkMode,
-  completedTasks,
   handleTaskComplete,
+  onTaskCreated,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '' })
@@ -39,11 +40,31 @@ const AllTasks: React.FC<AllTasksProps> = ({
     }))
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (formData.title.trim()) {
-      console.log('New task:', formData)
-      setFormData({ title: '', description: '' })
-      setShowAddForm(false)
+      try {
+        const response = await apiCall('/todo/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: formData.title,
+            description: formData.description
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Task created:', data)
+          setFormData({ title: '', description: '' })
+          setShowAddForm(false)
+          alert('Task created successfully!')
+          await onTaskCreated()
+        } else {
+          alert('Failed to create task')
+        }
+      } catch (error) {
+        console.error('Error creating task:', error)
+        alert('An error occurred while creating the task')
+      }
     }
   }
   return (
@@ -142,25 +163,32 @@ const AllTasks: React.FC<AllTasksProps> = ({
           {allTasks.map(task => (
             <label
               key={task.id}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+              className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                 isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-100'
               }`}
             >
               <div
-                onClick={() => handleTaskComplete(task.id)}
+                onClick={() => handleTaskComplete(task)}
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  completedTasks.includes(task.id)
+                  task.completed
                     ? isDarkMode ? 'bg-white border-white' : 'bg-black border-black'
                     : isDarkMode ? 'border-white hover:bg-gray-800' : 'border-black hover:bg-gray-200'
                 }`}
               >
-                {completedTasks.includes(task.id) && (
+                {task.completed && (
                   <Check size={16} className={isDarkMode ? 'text-black' : 'text-white'} />
                 )}
               </div>
-              <span className={completedTasks.includes(task.id) ? 'line-through text-gray-500' : isDarkMode ? 'text-white' : 'text-black'}>
-                {task.title}
-              </span>
+              <div className="min-w-0">
+                <p className={`font-medium ${task.completed ? 'line-through text-gray-500' : isDarkMode ? 'text-white' : 'text-black'}`}>
+                  {task.title}
+                </p>
+                {task.description && (
+                  <p className={`text-xs mt-1 leading-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {task.description}
+                  </p>
+                )}
+              </div>
             </label>
           ))}
         </div>

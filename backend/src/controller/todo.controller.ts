@@ -1,6 +1,6 @@
 import type { Request, Response } from "express"
 import { findUserByUserId } from "../db/user.db.js"
-import { createTodo, findTodoAndUpdate, getTodos } from "../db/todo.db.js"
+import { completedTasks, createTodo, findTodoAndUpdate, getTodos } from "../db/todo.db.js"
 
 const addTodo = async(req: Request, res: Response) => {
   const { title, description, completed } = req.body
@@ -75,8 +75,25 @@ const  updateTodo = async(req: Request, res: Response) => {
   }
 }
 
+const getCompletedTasks = async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    return res.status(401).json({
+      message: "Unauthorized request"
+    })
+  }
+  const completedTask = await completedTasks(req.user.id)
+
+  return res
+    .status(200)
+    .json({
+      message: "fetch completed tasks successfully",
+      completedTask
+    })
+}
+
 export {
   addTodo,
   getTodo,
-  updateTodo
+  updateTodo,
+  getCompletedTasks
 }

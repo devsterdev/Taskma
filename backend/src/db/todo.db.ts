@@ -33,3 +33,12 @@ export const findTodoAndUpdate = (id: number, updates: any) => {
     data: updates
   })
 }
+
+export const completedTasks =(userId: number) => {
+  return client.todo.findMany({
+    where: {
+      userId,
+      completed: true
+    }
+  })
+}
