@@ -55,7 +55,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle, onLo
 
         {/* GitHub Icon */}
         <a
-          href="https://github.com"
+          href="https://github.com/devsterdev/Taskma"
           target="_blank"
           rel="noopener noreferrer"
           className={`p-2 rounded-lg transition-colors ${

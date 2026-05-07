@@ -34,11 +34,8 @@ export const findTodoAndUpdate = (id: number, updates: any) => {
   })
 }
 
-export const completedTasks =(userId: number) => {
-  return client.todo.findMany({
-    where: {
-      userId,
-      completed: true
-    }
+export const deleteTodoById = (id: number) => {
+  return client.todo.delete({
+    where: {id}
   })
 }

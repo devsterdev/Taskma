@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Check, Plus, Menu, X } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Check, Plus, Menu, X, MoreVertical, Edit, Trash2 } from 'lucide-react'
 import { apiCall } from '../utils/api'
 
 interface Task {
@@ -27,6 +27,28 @@ const AllTasks: React.FC<AllTasksProps> = ({
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '' })
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+  const [editFormData, setEditFormData] = useState({ title: '', description: '' })
+  const [hoveredTaskId, setHoveredTaskId] = useState<number | null>(null)
+  const [menuOpenTaskId, setMenuOpenTaskId] = useState<number | null>(null)
+
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpenTaskId(null)
+      }
+    }
+
+    if (menuOpenTaskId !== null) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [menuOpenTaskId])
 
   const handleAddTaskClick = () => {
     setShowAddForm(true)
@@ -35,6 +57,14 @@ const AllTasks: React.FC<AllTasksProps> = ({
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({
       ...prev,
       [name]: value
     }))
@@ -64,6 +94,52 @@ const AllTasks: React.FC<AllTasksProps> = ({
       } catch (error) {
         console.error('Error creating task:', error)
         alert('An error occurred while creating the task')
+      }
+    }
+  }
+
+  const handleEditSubmit = async () => {
+    if (editingTaskId && editFormData.title.trim()) {
+      try {
+        const response = await apiCall(`/todo/update/${editingTaskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            title: editFormData.title,
+            description: editFormData.description
+          })
+        })
+
+        if (response.ok) {
+          setEditingTaskId(null)
+          setEditFormData({ title: '', description: '' })
+          alert('Task updated successfully!')
+          await onTaskCreated()
+        } else {
+          alert('Failed to update task')
+        }
+      } catch (error) {
+        console.error('Error updating task:', error)
+        alert('An error occurred while updating the task')
+      }
+    }
+  }
+
+  const handleDelete = async (taskId: number) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      try {
+        const response = await apiCall(`/todo/delete/${taskId}`, {
+          method: 'DELETE'
+        })
+
+        if (response.ok) {
+          alert('Task deleted successfully!')
+          await onTaskCreated()
+        } else {
+          alert('Failed to delete task')
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error)
+        alert('An error occurred while deleting the task')
       }
     }
   }
@@ -161,15 +237,17 @@ const AllTasks: React.FC<AllTasksProps> = ({
 
         <div className="space-y-2">
           {allTasks.map(task => (
-            <label
+            <div
               key={task.id}
-              className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+              className={`relative flex items-start gap-3 p-3 rounded-lg transition-colors ${
                 isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-100'
               }`}
+              onMouseEnter={() => setHoveredTaskId(task.id)}
+              onMouseLeave={() => setHoveredTaskId(null)}
             >
               <div
                 onClick={() => handleTaskComplete(task)}
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
                   task.completed
                     ? isDarkMode ? 'bg-white border-white' : 'bg-black border-black'
                     : isDarkMode ? 'border-white hover:bg-gray-800' : 'border-black hover:bg-gray-200'
@@ -179,17 +257,111 @@ const AllTasks: React.FC<AllTasksProps> = ({
                   <Check size={16} className={isDarkMode ? 'text-black' : 'text-white'} />
                 )}
               </div>
-              <div className="min-w-0">
-                <p className={`font-medium ${task.completed ? 'line-through text-gray-500' : isDarkMode ? 'text-white' : 'text-black'}`}>
-                  {task.title}
-                </p>
-                {task.description && (
-                  <p className={`text-xs mt-1 leading-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {task.description}
+
+              {editingTaskId === task.id ? (
+                <div className="flex-1 space-y-2">
+                  <input
+                    type="text"
+                    name="title"
+                    value={editFormData.title}
+                    onChange={handleEditChange}
+                    className={`w-full px-2 py-1 rounded border transition-colors ${
+                      isDarkMode
+                        ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
+                        : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
+                    }`}
+                  />
+                  <textarea
+                    name="description"
+                    value={editFormData.description}
+                    onChange={handleEditChange}
+                    rows={2}
+                    className={`w-full px-2 py-1 rounded border transition-colors resize-none ${
+                      isDarkMode
+                        ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
+                        : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
+                    }`}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleEditSubmit}
+                      className={`px-3 py-1 rounded transition-colors ${
+                        isDarkMode
+                          ? 'bg-white text-black hover:bg-gray-200'
+                          : 'bg-black text-white hover:bg-gray-900'
+                      }`}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      onClick={() => setEditingTaskId(null)}
+                      className={`px-3 py-1 rounded transition-colors ${
+                        isDarkMode
+                          ? 'bg-gray-800 text-white hover:bg-gray-700'
+                          : 'bg-gray-200 text-black hover:bg-gray-300'
+                      }`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="min-w-0 flex-1">
+                  <p className={`font-medium ${task.completed ? 'line-through text-gray-500' : isDarkMode ? 'text-white' : 'text-black'}`}>
+                    {task.title}
                   </p>
-                )}
-              </div>
-            </label>
+                  {task.description && (
+                    <p className={`text-xs mt-1 leading-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {task.description}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {hoveredTaskId === task.id && editingTaskId !== task.id && (
+                <button 
+                  onClick={() => setMenuOpenTaskId(menuOpenTaskId === task.id ? null : task.id)}
+                  className={`p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+                >
+                  <MoreVertical size={16} className={isDarkMode ? 'text-white' : 'text-black'} />
+                </button>
+              )}
+
+              {menuOpenTaskId === task.id && (
+                <div 
+                  ref={menuRef}
+                  className={`absolute right-0 mt-1 w-32 rounded-md shadow-lg z-10 ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-white'
+                  } border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                >
+                  <button
+                    onClick={() => {
+                      setEditingTaskId(task.id)
+                      setEditFormData({ title: task.title, description: task.description })
+                      setMenuOpenTaskId(null)
+                    }}
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
+                      isDarkMode ? 'text-white hover:bg-gray-700' : 'text-black hover:bg-gray-100'
+                    }`}
+                  >
+                    <Edit size={14} />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDelete(task.id)
+                      setMenuOpenTaskId(null)
+                    }}
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
+                      isDarkMode ? 'text-white hover:bg-gray-700' : 'text-red-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>

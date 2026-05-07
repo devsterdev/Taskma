@@ -1,6 +1,6 @@
 import type { Request, Response } from "express"
 import { findUserByUserId } from "../db/user.db.js"
-import { completedTasks, createTodo, findTodoAndUpdate, getTodos } from "../db/todo.db.js"
+import { createTodo, findTodoAndUpdate, getTodos, deleteTodoById } from "../db/todo.db.js"
 
 const addTodo = async(req: Request, res: Response) => {
   const { title, description, completed } = req.body
@@ -52,13 +52,13 @@ const getTodo = async(req: Request, res: Response) => {
 }
 
 const  updateTodo = async(req: Request, res: Response) => {
-  const id  = Number(req.params.id);
-  const updates = req.body;
+  const id  = Number(req.params.id)
+  const updates = req.body
   if (isNaN(id)) {
-    return res.status(400).json({ message: "Invalid ID" });
+    return res.status(400).json({ message: "Invalid ID" })
   }
   if (!updates || Object.keys(updates).length === 0) {
-    return res.status(400).json({ message: "No update data provided" });
+    return res.status(400).json({ message: "No update data provided" })
   }
   try{
     const todo = await findTodoAndUpdate(id, updates)
@@ -75,25 +75,28 @@ const  updateTodo = async(req: Request, res: Response) => {
   }
 }
 
-const getCompletedTasks = async (req: Request, res: Response) => {
-  if (!req.user?.id) {
-    return res.status(401).json({
-      message: "Unauthorized request"
-    })
+const deleteTodo = async(req: Request, res: Response) => {
+  const id  = Number(req.params.id)
+  try{
+    const todo = await deleteTodoById(id)
+    return res
+      .status(200)
+      .json(todo)
   }
-  const completedTask = await completedTasks(req.user.id)
-
-  return res
-    .status(200)
-    .json({
-      message: "fetch completed tasks successfully",
-      completedTask
-    })
+  catch(err: any){
+    return res
+      .status(500)
+      .json({ 
+        error: err.message
+      });
+  }
 }
+
+
 
 export {
   addTodo,
   getTodo,
   updateTodo,
-  getCompletedTasks
+  deleteTodo
 }
