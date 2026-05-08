@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Moon, Sun, User, Github } from 'lucide-react'
+import { Github, LogOut, Moon, Sun, User } from 'lucide-react'
 
 interface NavbarProps {
   isDarkMode?: boolean
@@ -14,132 +14,109 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle, onLo
     onThemeToggle?.(!isDarkMode)
   }
 
+  const navClass = isDarkMode
+    ? 'border-zinc-950 bg-[#121212] text-zinc-100'
+    : 'border-zinc-200 bg-white text-zinc-950'
+  const logoClass = isDarkMode
+    ? 'bg-zinc-100 text-zinc-950'
+    : 'bg-zinc-950 text-white'
+  const iconButtonClass = isDarkMode
+    ? 'border-zinc-800 bg-[#181818] text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white'
+    : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-950'
+  const dropdownClass = isDarkMode
+    ? 'border-zinc-800 bg-[#181818] text-zinc-100 shadow-black/30'
+    : 'border-zinc-200 bg-white text-zinc-950 shadow-zinc-200/80'
+  const dropdownBorderClass = isDarkMode ? 'border-zinc-800' : 'border-zinc-200'
+  const mutedClass = isDarkMode ? 'text-zinc-400' : 'text-zinc-600'
+  const menuItemClass = isDarkMode
+    ? 'text-zinc-100 hover:bg-zinc-800'
+    : 'text-zinc-800 hover:bg-zinc-50'
+
   return (
     <nav
-      className={`border-b-2 ${
-        isDarkMode
-          ? 'bg-black border-white text-white'
-          : 'bg-white border-black text-black'
-      } px-6 py-4 flex items-center justify-between`}
+      className={`flex h-16 items-center justify-between border-b px-5 ${navClass}`}
     >
-      {/* Left - Logo/Title */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${
-            isDarkMode ? 'bg-white text-black' : 'bg-black text-white'
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg text-base font-semibold ${logoClass}`}
         >
           T
         </div>
-        <h1 className="text-2xl font-bold">Taskma</h1>
+        <h1 className="text-lg font-semibold">Taskma</h1>
       </div>
 
-      {/* Right - Icons */}
-      <div className="flex items-center gap-4">
-        {/* Theme Toggle */}
+      <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={handleThemeToggle}
-          className={`p-2 rounded-lg transition-colors ${
-            isDarkMode
-              ? 'bg-white text-black hover:bg-gray-200'
-              : 'bg-gray-100 hover:bg-gray-200'
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${iconButtonClass}`}
           title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {isDarkMode ? (
-            <Sun size={20} className="text-black" />
-          ) : (
-            <Moon size={20} className="text-gray-800" />
-          )}
+          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* GitHub Icon */}
         <a
           href="https://github.com/devsterdev/Taskma"
           target="_blank"
           rel="noopener noreferrer"
-          className={`p-2 rounded-lg transition-colors ${
-            isDarkMode
-              ? 'bg-white text-black hover:bg-gray-200'
-              : 'bg-gray-100 hover:bg-gray-200'
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${iconButtonClass}`}
           title="Visit GitHub"
+          aria-label="Visit GitHub"
         >
-          <Github size={20} />
+          <Github size={18} />
         </a>
 
-        {/* Profile Icon with Dropdown */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className={`p-2 rounded-lg transition-colors ${
-              isDarkMode
-                ? 'bg-white text-black hover:bg-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${iconButtonClass}`}
             title="Profile menu"
+            aria-label="Profile menu"
+            aria-expanded={showProfileMenu}
           >
-            <User size={20} />
+            <User size={18} />
           </button>
 
-          {/* Profile Dropdown Menu */}
           {showProfileMenu && (
             <div
-              className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg z-10 ${
-                isDarkMode
-                  ? 'bg-black border-2 border-white'
-                  : 'bg-white border-2 border-black'
-              }`}
+              className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-lg border shadow-lg ${dropdownClass}`}
             >
-              <div
-                className={`px-4 py-3 ${
-                  isDarkMode ? 'border-b-2 border-white' : 'border-b-2 border-black'
-                }`}
-              >
-                <p className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-black'}`}>John Doe</p>
-                <p
-                  className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
-                >
-                  john@example.com
-                </p>
+              <div className={`border-b px-4 py-3 ${dropdownBorderClass}`}>
+                <p className="text-sm font-semibold">John Doe</p>
+                <p className={`text-xs ${mutedClass}`}>john@example.com</p>
               </div>
 
               <button
-                className={`w-full text-left px-4 py-2 transition-colors ${
-                  isDarkMode
-                    ? 'hover:bg-white hover:text-black text-white'
-                    : 'hover:bg-gray-100'
-                }`}
+                type="button"
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${menuItemClass}`}
               >
                 View Profile
               </button>
               <button
-                className={`w-full text-left px-4 py-2 transition-colors ${
-                  isDarkMode
-                    ? 'hover:bg-white hover:text-black text-white'
-                    : 'hover:bg-gray-100'
-                }`}
+                type="button"
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${menuItemClass}`}
               >
                 Settings
               </button>
               <button
-                className={`w-full text-left px-4 py-2 transition-colors ${
-                  isDarkMode
-                    ? 'hover:bg-white hover:text-black text-white'
-                    : 'hover:bg-gray-100'
-                }`}
+                type="button"
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${menuItemClass}`}
               >
                 Help
               </button>
 
               <button
+                type="button"
                 onClick={onLogout}
-                className={`w-full text-left px-4 py-3 transition-colors border-t ${
+                className={`flex w-full items-center gap-2 border-t px-4 py-3 text-left text-sm transition-colors ${
                   isDarkMode
-                    ? 'border-white hover:bg-white hover:text-black text-white'
-                    : 'border-black hover:bg-gray-100 text-red-600'
+                    ? 'border-zinc-800 text-red-300 hover:bg-zinc-800'
+                    : 'border-zinc-200 text-red-600 hover:bg-red-50'
                 }`}
               >
+                <LogOut size={15} />
                 Logout
               </button>
             </div>

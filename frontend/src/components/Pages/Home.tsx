@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Navbar from '../Navbar'
 import TagSidebar from '../TagSidebar'
-import AllTasks from '../AllTasks'
+import AllTasks, { type AllTasksHandle } from '../AllTasks'
 import TodayPanel from '../TodayPanel'
 import { apiCall } from '../../utils/api'
 
@@ -19,8 +19,17 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
   const [uniqueTags, setUniqueTags] = useState<string[]>(['today'])
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>({ today: true })
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const allTasksRef = useRef<AllTasksHandle>(null)
 
-  const selectedTag = Object.values(tagFilters).every(Boolean) ? 'All tasks' : 'Filtered tasks'
+  const allTagsSelected = Object.values(tagFilters).every(Boolean)
+  const selectedTags = Object.entries(tagFilters)
+    .filter(([, isSelected]) => isSelected)
+    .map(([tag]) => tag)
+  const selectedTag = allTagsSelected
+    ? 'All tasks'
+    : selectedTags.length === 1
+      ? selectedTags[0][0].toUpperCase() + selectedTags[0].slice(1)
+      : 'Filtered tasks'
 
   const fetchTasks = async () => {
     try {
@@ -72,6 +81,16 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
     }))
   }
 
+  const handleShowAllTags = () => {
+    setTagFilters(prev => {
+      const nextFilters: Record<string, boolean> = {}
+      Object.keys(prev).forEach(tag => {
+        nextFilters[tag] = true
+      })
+      return nextFilters
+    })
+  }
+
   const handleTaskComplete = async (task: Task) => {
     try {
       const response = await apiCall(`/todo/update/${task.id}`, {
@@ -98,7 +117,7 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
   const allTasks = tasks.filter(task => {
     const taskTags = (task.tags || []).map(tag => tag.name)
     if (taskTags.length === 0) {
-      return true
+      return allTagsSelected
     }
 
     return taskTags.some(tagName => tagFilters[tagName])
@@ -132,11 +151,14 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
           tagFilters={tagFilters}
           tagCounts={tagCounts}
           onToggleTag={handleToggleTag}
+          onShowAll={handleShowAllTags}
           isDarkMode={isDarkMode}
+          onCreate={() => allTasksRef.current?.openCreateForm()}
         />
 
         {/* MIDDLE SECTION - ALL TASKS */}
-        <AllTasks 
+        <AllTasks
+          ref={allTasksRef}
           selectedTag={selectedTag}
           allTasks={allTasks}
           isDarkMode={isDarkMode}
@@ -144,12 +166,13 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
           onTaskCreated={fetchTasks}
         />
 
-        <div className="w-96 min-h-0 flex flex-col overflow-hidden rounded-3xl border border-dashed border-slate-400/10">
+        <div className="w-96 min-h-0 flex flex-col overflow-hidden">
           <TodayPanel
             isDarkMode={isDarkMode}
             todayTasks={todayTasks}
             completedTasks={completedTasks}
             onTaskComplete={handleTaskComplete}
+            onTaskCreated={fetchTasks}
           />
         </div>
       </div>

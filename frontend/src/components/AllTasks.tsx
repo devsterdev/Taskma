@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Check, Plus, Menu, X, MoreVertical, Edit, Trash2 } from 'lucide-react'
+import { Check, Edit, MoreVertical, Plus, Trash2, X } from 'lucide-react'
 import { apiCall } from '../utils/api'
 
 interface Task {
@@ -19,13 +19,17 @@ interface AllTasksProps {
   onTaskCreated: () => Promise<void>
 }
 
-const AllTasks: React.FC<AllTasksProps> = ({
+export interface AllTasksHandle {
+  openCreateForm: () => void
+}
+
+const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
   selectedTag,
   allTasks,
   isDarkMode,
   handleTaskComplete,
   onTaskCreated,
-}) => {
+}, ref) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '', tags: '', today: false })
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
@@ -34,6 +38,23 @@ const AllTasks: React.FC<AllTasksProps> = ({
   const [menuOpenTaskId, setMenuOpenTaskId] = useState<number | null>(null)
 
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const title = selectedTag === 'All tasks' ? 'My Tasks' : selectedTag
+  const pageClass = isDarkMode
+    ? 'bg-[#121212] text-zinc-100 border-zinc-950'
+    : 'bg-white text-zinc-950 border-zinc-200'
+  const mutedClass = isDarkMode ? 'text-zinc-400' : 'text-zinc-600'
+  const inputClass = `w-full rounded-md border px-3 py-2 text-sm transition-colors ${
+    isDarkMode
+      ? 'border-zinc-700 bg-[#121212] text-zinc-100 placeholder-zinc-500 focus:border-zinc-400 focus:outline-none'
+      : 'border-zinc-300 bg-white text-zinc-950 placeholder-zinc-400 focus:border-zinc-700 focus:outline-none'
+  }`
+  const secondaryButtonClass = `rounded-md px-3 py-1.5 text-sm transition-colors ${
+    isDarkMode ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
+  }`
+  const primaryButtonClass = `rounded-md px-3 py-1.5 text-sm transition-colors ${
+    isDarkMode ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-950 text-white hover:bg-zinc-800'
+  }`
 
   const normalizeTagsInput = (value: string) =>
     value
@@ -70,8 +91,13 @@ const AllTasks: React.FC<AllTasksProps> = ({
   }, [menuOpenTaskId])
 
   const handleAddTaskClick = () => {
+    setEditingTaskId(null)
     setShowAddForm(true)
   }
+
+  React.useImperativeHandle(ref, () => ({
+    openCreateForm: handleAddTaskClick
+  }))
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement
@@ -200,246 +226,190 @@ const AllTasks: React.FC<AllTasksProps> = ({
       }
     }
   }
+
+  const startEditing = (task: Task) => {
+    const taskTagNames = (task.tags || []).map(tag => tag.name)
+    setEditingTaskId(task.id)
+    setEditFormData({
+      title: task.title,
+      description: task.description,
+      tags: taskTagNames.filter(tagName => tagName !== 'today').join(', '),
+      today: taskTagNames.includes('today')
+    })
+    setMenuOpenTaskId(null)
+  }
+
   return (
-    <div className={`flex-1 ${isDarkMode ? 'border-white' : 'border-black'} border-r p-8 overflow-y-auto`}>
-      <div className="mb-8">
-        <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-          <Menu size={24} />
-          {selectedTag}
-        </h2>
+    <div className={`flex-1 overflow-y-auto border-r px-5 py-5 ${pageClass}`}>
+      <div className="mb-5">
+        <h2 className="text-lg font-normal">{title}</h2>
+      </div>
 
-        <button 
-          onClick={handleAddTaskClick}
-          className={`mb-6 flex items-center gap-2 transition-colors ${isDarkMode ? 'text-white hover:text-gray-300' : 'text-black hover:text-gray-700'}`}
-        >
-          <Plus size={20} />
-          Add a task
-        </button>
+      <button
+        type="button"
+        onClick={handleAddTaskClick}
+        className={`mb-4 flex items-center gap-4 text-sm transition-colors ${
+          isDarkMode ? 'text-blue-200 hover:text-white' : 'text-zinc-700 hover:text-black'
+        }`}
+      >
+        <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border ${
+          isDarkMode ? 'border-blue-200 text-blue-200' : 'border-zinc-700 text-zinc-700'
+        }`}>
+          <Plus size={13} />
+        </span>
+        Add a task
+      </button>
 
-        {/* Add Task Form */}
-        {showAddForm && (
-          <div className={`mb-6 p-4 rounded-lg border-2 transition-all ${isDarkMode ? 'bg-gray-900 border-white' : 'bg-gray-50 border-black'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-black'}`}>New Task</h3>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className={`p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
-              >
-                <X size={20} className={isDarkMode ? 'text-white' : 'text-black'} />
+      {showAddForm && (
+        <div className={`mb-5 rounded-lg border p-4 ${isDarkMode ? 'border-zinc-700 bg-[#161616]' : 'border-zinc-300 bg-zinc-50'}`}>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-medium">New task</h3>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className={`rounded-md p-1 transition-colors ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-200'}`}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleFormChange}
+              placeholder="Task title"
+              className={inputClass}
+            />
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleFormChange}
+              placeholder="Optional note"
+              rows={2}
+              className={`${inputClass} resize-none`}
+            />
+            <input
+              type="text"
+              name="tags"
+              value={formData.tags}
+              onChange={handleFormChange}
+              placeholder="Tags separated by commas"
+              className={inputClass}
+            />
+            <label className={`flex items-center gap-2 text-sm ${mutedClass}`}>
+              <input
+                type="checkbox"
+                name="today"
+                checked={formData.today}
+                onChange={handleFormChange}
+                className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+              />
+              Today
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowAddForm(false)} className={secondaryButtonClass}>
+                Cancel
+              </button>
+              <button type="button" onClick={handleSubmit} className={primaryButtonClass}>
+                Add Task
               </button>
             </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleFormChange}
-                  placeholder="Enter task title"
-                  className={`w-full px-3 py-2 rounded border-2 transition-colors ${
-                    isDarkMode
-                      ? 'bg-black border-white text-white placeholder-gray-500 focus:outline-none focus:border-gray-300'
-                      : 'bg-white border-black text-black placeholder-gray-400 focus:outline-none focus:border-gray-600'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleFormChange}
-                  placeholder="Enter task description (optional)"
-                  rows={3}
-                  className={`w-full px-3 py-2 rounded border-2 transition-colors resize-none ${
-                    isDarkMode
-                      ? 'bg-black border-white text-white placeholder-gray-500 focus:outline-none focus:border-gray-300'
-                      : 'bg-white border-black text-black placeholder-gray-400 focus:outline-none focus:border-gray-600'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                  Tags
-                </label>
-                <input
-                  type="text"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleFormChange}
-                  placeholder="Enter tags separated by commas"
-                  className={`w-full px-3 py-2 rounded border-2 transition-colors ${
-                    isDarkMode
-                      ? 'bg-black border-white text-white placeholder-gray-500 focus:outline-none focus:border-gray-300'
-                      : 'bg-white border-black text-black placeholder-gray-400 focus:outline-none focus:border-gray-600'
-                  }`}
-                />
-                <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Example: work, urgent, frontend
-                </p>
-              </div>
-
-              <div className={`flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                <input
-                  type="checkbox"
-                  name="today"
-                  checked={formData.today}
-                  onChange={handleFormChange}
-                  id="today-checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                />
-                <label htmlFor="today-checkbox" className="text-sm font-medium">
-                  Add today tag
-                </label>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-2">
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    isDarkMode
-                      ? 'bg-gray-800 text-white hover:bg-gray-700'
-                      : 'bg-gray-200 text-black hover:bg-gray-300'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    isDarkMode
-                      ? 'bg-white text-black hover:bg-gray-200'
-                      : 'bg-black text-white hover:bg-gray-900'
-                  }`}
-                >
-                  Add Task
-                </button>
-              </div>
-            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="space-y-2">
-          {allTasks.map(task => (
+      <div className="space-y-1">
+        {allTasks.length === 0 ? (
+          <p className={`py-8 text-sm ${mutedClass}`}>No tasks yet</p>
+        ) : (
+          allTasks.map(task => (
             <div
               key={task.id}
-              className={`relative flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-100'
+              className={`group relative flex items-start gap-4 rounded-md py-2 pr-9 transition-colors ${
+                isDarkMode ? 'hover:bg-[#181818]' : 'hover:bg-zinc-50'
               }`}
               onMouseEnter={() => setHoveredTaskId(task.id)}
               onMouseLeave={() => setHoveredTaskId(null)}
             >
-              <div
+              <button
+                type="button"
                 onClick={() => handleTaskComplete(task)}
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                   task.completed
-                    ? isDarkMode ? 'bg-white border-white' : 'bg-black border-black'
-                    : isDarkMode ? 'border-white hover:bg-gray-800' : 'border-black hover:bg-gray-200'
+                    ? isDarkMode ? 'border-zinc-100 bg-zinc-100 text-black' : 'border-black bg-black text-white'
+                    : isDarkMode ? 'border-zinc-300 hover:border-white' : 'border-zinc-700 hover:border-black'
                 }`}
+                aria-label={task.completed ? 'Mark task incomplete' : 'Mark task complete'}
               >
-                {task.completed && (
-                  <Check size={16} className={isDarkMode ? 'text-black' : 'text-white'} />
-                )}
-              </div>
+                {task.completed && <Check size={12} />}
+              </button>
 
               {editingTaskId === task.id ? (
-                <div className="flex-1 space-y-2">
+                <div className="min-w-0 flex-1 space-y-2">
                   <input
                     type="text"
                     name="title"
                     value={editFormData.title}
                     onChange={handleEditChange}
-                    className={`w-full px-2 py-1 rounded border transition-colors ${
-                      isDarkMode
-                        ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
-                        : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
-                    }`}
+                    className={inputClass}
                   />
                   <textarea
                     name="description"
                     value={editFormData.description}
                     onChange={handleEditChange}
                     rows={2}
-                    className={`w-full px-2 py-1 rounded border transition-colors resize-none ${
-                      isDarkMode
-                        ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
-                      : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
-                    }`}
+                    className={`${inputClass} resize-none`}
                   />
                   <input
                     type="text"
                     name="tags"
                     value={editFormData.tags}
                     onChange={handleEditChange}
-                    placeholder="Enter tags separated by commas"
-                    className={`w-full px-2 py-1 rounded border transition-colors ${
-                      isDarkMode
-                        ? 'bg-black border-white text-white placeholder-gray-500 focus:outline-none focus:border-gray-300'
-                        : 'bg-white border-black text-black placeholder-gray-400 focus:outline-none focus:border-gray-600'
-                    }`}
+                    placeholder="Tags separated by commas"
+                    className={inputClass}
                   />
-                  <div className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                  <label className={`flex items-center gap-2 text-sm ${mutedClass}`}>
                     <input
                       type="checkbox"
                       name="today"
                       checked={editFormData.today}
                       onChange={handleEditChange}
-                      id={`today-edit-checkbox-${task.id}`}
                       className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                     />
-                    <label htmlFor={`today-edit-checkbox-${task.id}`} className="text-sm font-medium">
-                      Add today tag
-                    </label>
-                  </div>
+                    Today
+                  </label>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleEditSubmit}
-                      className={`px-3 py-1 rounded transition-colors ${
-                        isDarkMode
-                          ? 'bg-white text-black hover:bg-gray-200'
-                          : 'bg-black text-white hover:bg-gray-900'
-                      }`}
-                    >
+                    <button type="button" onClick={handleEditSubmit} className={primaryButtonClass}>
                       Submit
                     </button>
-                    <button
-                      onClick={() => setEditingTaskId(null)}
-                      className={`px-3 py-1 rounded transition-colors ${
-                        isDarkMode
-                          ? 'bg-gray-800 text-white hover:bg-gray-700'
-                          : 'bg-gray-200 text-black hover:bg-gray-300'
-                      }`}
-                    >
+                    <button type="button" onClick={() => setEditingTaskId(null)} className={secondaryButtonClass}>
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
-                  <p className={`font-medium ${task.completed ? 'line-through text-gray-500' : isDarkMode ? 'text-white' : 'text-black'}`}>
+                  <p className={`text-sm leading-5 ${
+                    task.completed ? 'text-zinc-500 line-through' : isDarkMode ? 'text-zinc-100' : 'text-zinc-900'
+                  }`}>
                     {task.title}
                   </p>
                   {task.description && (
-                    <p className={`text-xs mt-1 leading-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <p className={`text-xs leading-4 ${mutedClass}`}>
                       {task.description}
                     </p>
                   )}
                   {task.tags && task.tags.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-1 flex flex-wrap gap-1.5">
                       {task.tags.map(tag => (
                         <span
                           key={tag.id}
-                          className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}`}
+                          className={`text-[11px] ${isDarkMode ? 'text-zinc-500' : 'text-zinc-500'}`}
                         >
-                          {tag.name}
+                          #{tag.name}
                         </span>
                       ))}
                     </div>
@@ -448,47 +418,43 @@ const AllTasks: React.FC<AllTasksProps> = ({
               )}
 
               {hoveredTaskId === task.id && editingTaskId !== task.id && (
-                <button 
+                <button
+                  type="button"
                   onClick={() => setMenuOpenTaskId(menuOpenTaskId === task.id ? null : task.id)}
-                  className={`p-1 rounded transition-colors ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+                  className={`absolute right-1 top-1 rounded-md p-1 transition-colors ${
+                    isDarkMode ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-black'
+                  }`}
+                  aria-label="Task options"
                 >
-                  <MoreVertical size={16} className={isDarkMode ? 'text-white' : 'text-black'} />
+                  <MoreVertical size={16} />
                 </button>
               )}
 
               {menuOpenTaskId === task.id && (
-                <div 
+                <div
                   ref={menuRef}
-                  className={`absolute right-0 mt-1 w-32 rounded-md shadow-lg z-10 ${
-                    isDarkMode ? 'bg-gray-800' : 'bg-white'
-                  } border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                  className={`absolute right-1 top-8 z-10 w-32 rounded-md border shadow-lg ${
+                    isDarkMode ? 'border-zinc-700 bg-[#191919]' : 'border-zinc-200 bg-white'
+                  }`}
                 >
                   <button
-                    onClick={() => {
-                      const taskTagNames = (task.tags || []).map(tag => tag.name)
-                      setEditingTaskId(task.id)
-                      setEditFormData({
-                        title: task.title,
-                        description: task.description,
-                        tags: taskTagNames.filter(tagName => tagName !== 'today').join(', '),
-                        today: taskTagNames.includes('today')
-                      })
-                      setMenuOpenTaskId(null)
-                    }}
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
-                      isDarkMode ? 'text-white hover:bg-gray-700' : 'text-black hover:bg-gray-100'
+                    type="button"
+                    onClick={() => startEditing(task)}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                      isDarkMode ? 'text-white hover:bg-zinc-800' : 'text-black hover:bg-zinc-100'
                     }`}
                   >
                     <Edit size={14} />
                     Edit
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       handleDelete(task.id)
                       setMenuOpenTaskId(null)
                     }}
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
-                      isDarkMode ? 'text-white hover:bg-gray-700' : 'text-red-400 hover:bg-gray-700'
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                      isDarkMode ? 'text-red-300 hover:bg-zinc-800' : 'text-red-600 hover:bg-red-50'
                     }`}
                   >
                     <Trash2 size={14} />
@@ -497,11 +463,11 @@ const AllTasks: React.FC<AllTasksProps> = ({
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          ))
+        )}
       </div>
     </div>
   )
-}
+})
 
 export default AllTasks
