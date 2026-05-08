@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import { Check, Plus, Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import Navbar from '../Navbar'
+import TagSidebar from '../TagSidebar'
 import AllTasks from '../AllTasks'
-import CompletedTasks from '../CompletedTasks'
 import TodayPanel from '../TodayPanel'
 import { apiCall } from '../../utils/api'
 
@@ -12,13 +11,16 @@ interface Task {
   description: string
   completed: boolean
   userId: number
+  tags?: { id: number; name: string }[]
 }
 
 const Home = ({ onLogout }: { onLogout: () => void }) => {
   const [tasks, setTasks] = useState<Task[]>([])
-
-  const [selectedTag, setSelectedTag] = useState('All tasks')
+  const [uniqueTags, setUniqueTags] = useState<string[]>(['today'])
+  const [tagFilters, setTagFilters] = useState<Record<string, boolean>>({ today: true })
   const [isDarkMode, setIsDarkMode] = useState(false)
+
+  const selectedTag = Object.values(tagFilters).every(Boolean) ? 'All tasks' : 'Filtered tasks'
 
   const fetchTasks = async () => {
     try {
@@ -26,10 +28,33 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
         method: 'GET',
       })
 
+      if (response.status === 401) {
+        onLogout()
+        return
+      }
+
       if (response.ok) {
         const data = await response.json()
         console.log(data)
-        setTasks(data.todos || data)
+        const todos: Task[] = data.todos || data
+        setTasks(todos)
+
+        const tagsFromTodos = todos.flatMap(todo =>
+          (todo.tags || []).map(tag => tag.name)
+        )
+
+        const updatedTags = Array.from(new Set(['today', ...tagsFromTodos]))
+        setUniqueTags(updatedTags)
+
+        setTagFilters(prev => {
+          const nextFilters: Record<string, boolean> = {}
+          updatedTags.forEach(tag => {
+            nextFilters[tag] = prev[tag] ?? true
+          })
+          return nextFilters
+        })
+      } else {
+        console.error('Failed to fetch tasks:', response.statusText)
       }
     } catch (error) {
       console.error('Error fetching tasks:', error)
@@ -40,7 +65,12 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
     fetchTasks()
   }, [])
 
-  const tags = ['All tasks', 'Starred', 'My Tasks']
+  const handleToggleTag = (tag: string) => {
+    setTagFilters(prev => ({
+      ...prev,
+      [tag]: !prev[tag]
+    }))
+  }
 
   const handleTaskComplete = async (task: Task) => {
     try {
@@ -48,6 +78,11 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
         method: 'PATCH',
         body: JSON.stringify({ completed: !task.completed })
       })
+
+      if (response.status === 401) {
+        onLogout()
+        return
+      }
 
       if (response.ok) {
         await fetchTasks()
@@ -60,13 +95,29 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
     }
   }
 
-  const allTasks = (tasks || []).filter(task => {
-    if (selectedTag === 'All tasks') return true
-    if (selectedTag === 'My Tasks') return !task.completed
-    if (selectedTag === 'Starred') return false // Add starred feature later
-    return true
+  const allTasks = tasks.filter(task => {
+    const taskTags = (task.tags || []).map(tag => tag.name)
+    if (taskTags.length === 0) {
+      return true
+    }
+
+    return taskTags.some(tagName => tagFilters[tagName])
   })
 
+  const todayTasks = tasks.filter(task => {
+    const taskTags = (task.tags || []).map(tag => tag.name)
+    return taskTags.includes('today') && !task.completed
+  })
+
+  const completedTasks = tasks.filter(task => task.completed)
+
+  const tagCounts = uniqueTags.reduce((acc, tag) => {
+    acc[tag] = tasks.filter(task => {
+      const taskTags = (task.tags || []).map(t => t.name)
+      return taskTags.includes(tag)
+    }).length
+    return acc
+  }, {} as Record<string, number>)
 
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'}`}>
@@ -76,40 +127,13 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
       {/* MAIN CONTENT */}
       <div className="flex flex-1 overflow-hidden">
         {/* LEFT SIDEBAR - TAGS */}
-        <div className={`w-64 ${isDarkMode ? 'bg-black border-white' : 'bg-white border-black'} border-r p-6 overflow-y-auto`}>
-          <button className={`w-full ${isDarkMode ? 'bg-white text-black hover:bg-gray-300' : 'bg-black hover:bg-gray-900 text-white'} py-2 px-4 rounded-lg mb-8 flex items-center justify-center gap-2`}>
-            <Plus size={20} />
-            Create
-          </button>
-
-          <div className="space-y-3">
-            <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-black'} mb-4`}>TAGS</div>
-            {tags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`w-full text-left px-4 py-2 rounded-lg flex items-center gap-3 transition-colors ${
-                  selectedTag === tag
-                    ? isDarkMode ? 'bg-white text-black' : 'bg-black text-white'
-                    : isDarkMode ? 'hover:bg-gray-900 text-white' : 'hover:bg-gray-100 text-black'
-                }`}
-              >
-                {tag === 'Starred' ? (
-                  <Star size={18} />
-                ) : (
-                  <div className={`w-4 h-4 rounded border-2 ${isDarkMode ? 'border-white' : 'border-black'}`} />
-                )}
-                <span>{tag}</span>
-                {tag === 'My Tasks' && <span className={`ml-auto ${isDarkMode ? 'text-white' : 'text-black'}`}>36</span>}
-              </button>
-            ))}
-          </div>
-
-          <button className={`w-full mt-6 text-left px-4 py-2 flex items-center gap-2 transition-colors ${isDarkMode ? 'text-white hover:text-gray-300' : 'text-black hover:text-gray-700'}`}>
-            <Plus size={18} />
-            Create new list
-          </button>
-        </div>
+        <TagSidebar
+          tags={uniqueTags}
+          tagFilters={tagFilters}
+          tagCounts={tagCounts}
+          onToggleTag={handleToggleTag}
+          isDarkMode={isDarkMode}
+        />
 
         {/* MIDDLE SECTION - ALL TASKS */}
         <AllTasks 
@@ -120,13 +144,13 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
           onTaskCreated={fetchTasks}
         />
 
-        <div className="w-96 min-h-0 flex flex-col gap-6">
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-3xl border border-dashed border-slate-400/10">
-            <TodayPanel isDarkMode={isDarkMode} />
-          </div>
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-3xl border border-dashed border-slate-400/10">
-            <CompletedTasks isDarkMode={isDarkMode} completedTasksList={tasks.filter(task => task.completed)} />
-          </div>
+        <div className="w-96 min-h-0 flex flex-col overflow-hidden rounded-3xl border border-dashed border-slate-400/10">
+          <TodayPanel
+            isDarkMode={isDarkMode}
+            todayTasks={todayTasks}
+            completedTasks={completedTasks}
+            onTaskComplete={handleTaskComplete}
+          />
         </div>
       </div>
     </div>

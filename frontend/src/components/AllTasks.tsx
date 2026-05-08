@@ -8,6 +8,7 @@ interface Task {
   description: string
   completed: boolean
   userId: number
+  tags?: { id: number; name: string }[]
 }
 
 interface AllTasksProps {
@@ -26,13 +27,31 @@ const AllTasks: React.FC<AllTasksProps> = ({
   onTaskCreated,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
-  const [formData, setFormData] = useState({ title: '', description: '' })
+  const [formData, setFormData] = useState({ title: '', description: '', tags: '', today: false })
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
-  const [editFormData, setEditFormData] = useState({ title: '', description: '' })
+  const [editFormData, setEditFormData] = useState({ title: '', description: '', tags: '', today: false })
   const [hoveredTaskId, setHoveredTaskId] = useState<number | null>(null)
   const [menuOpenTaskId, setMenuOpenTaskId] = useState<number | null>(null)
 
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const normalizeTagsInput = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z,]/g, '')
+
+  const parseTags = (tags: string, today: boolean) => {
+    const parsedTags = tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(Boolean)
+
+    if (today && !parsedTags.includes('today')) {
+      parsedTags.push('today')
+    }
+
+    return parsedTags
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -55,7 +74,24 @@ const AllTasks: React.FC<AllTasksProps> = ({
   }
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target as HTMLInputElement
+
+    if (name === 'tags') {
+      setFormData(prev => ({
+        ...prev,
+        tags: normalizeTagsInput(value)
+      }))
+      return
+    }
+
+    if (type === 'checkbox') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }))
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -63,7 +99,24 @@ const AllTasks: React.FC<AllTasksProps> = ({
   }
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target as HTMLInputElement
+
+    if (name === 'tags') {
+      setEditFormData(prev => ({
+        ...prev,
+        tags: normalizeTagsInput(value)
+      }))
+      return
+    }
+
+    if (type === 'checkbox') {
+      setEditFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }))
+      return
+    }
+
     setEditFormData(prev => ({
       ...prev,
       [name]: value
@@ -73,18 +126,21 @@ const AllTasks: React.FC<AllTasksProps> = ({
   const handleSubmit = async () => {
     if (formData.title.trim()) {
       try {
+        const parsedTags = parseTags(formData.tags, formData.today)
+
         const response = await apiCall('/todo/add', {
           method: 'POST',
           body: JSON.stringify({
             title: formData.title,
-            description: formData.description
+            description: formData.description,
+            tags: parsedTags
           })
         })
 
         if (response.ok) {
           const data = await response.json()
           console.log('Task created:', data)
-          setFormData({ title: '', description: '' })
+          setFormData({ title: '', description: '', tags: '', today: false })
           setShowAddForm(false)
           alert('Task created successfully!')
           await onTaskCreated()
@@ -105,13 +161,14 @@ const AllTasks: React.FC<AllTasksProps> = ({
           method: 'PATCH',
           body: JSON.stringify({
             title: editFormData.title,
-            description: editFormData.description
+            description: editFormData.description,
+            tags: parseTags(editFormData.tags, editFormData.today)
           })
         })
 
         if (response.ok) {
           setEditingTaskId(null)
-          setEditFormData({ title: '', description: '' })
+          setEditFormData({ title: '', description: '', tags: '', today: false })
           alert('Task updated successfully!')
           await onTaskCreated()
         } else {
@@ -209,6 +266,41 @@ const AllTasks: React.FC<AllTasksProps> = ({
                 />
               </div>
 
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleFormChange}
+                  placeholder="Enter tags separated by commas"
+                  className={`w-full px-3 py-2 rounded border-2 transition-colors ${
+                    isDarkMode
+                      ? 'bg-black border-white text-white placeholder-gray-500 focus:outline-none focus:border-gray-300'
+                      : 'bg-white border-black text-black placeholder-gray-400 focus:outline-none focus:border-gray-600'
+                  }`}
+                />
+                <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Example: work, urgent, frontend
+                </p>
+              </div>
+
+              <div className={`flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                <input
+                  type="checkbox"
+                  name="today"
+                  checked={formData.today}
+                  onChange={handleFormChange}
+                  id="today-checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                />
+                <label htmlFor="today-checkbox" className="text-sm font-medium">
+                  Add today tag
+                </label>
+              </div>
+
               <div className="flex gap-2 justify-end pt-2">
                 <button
                   onClick={() => setShowAddForm(false)}
@@ -247,7 +339,7 @@ const AllTasks: React.FC<AllTasksProps> = ({
             >
               <div
                 onClick={() => handleTaskComplete(task)}
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
                   task.completed
                     ? isDarkMode ? 'bg-white border-white' : 'bg-black border-black'
                     : isDarkMode ? 'border-white hover:bg-gray-800' : 'border-black hover:bg-gray-200'
@@ -265,7 +357,7 @@ const AllTasks: React.FC<AllTasksProps> = ({
                     name="title"
                     value={editFormData.title}
                     onChange={handleEditChange}
-                    className={`w-full px -2 py-1 rounded border transition-colors ${
+                    className={`w-full px-2 py-1 rounded border transition-colors ${
                       isDarkMode
                         ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
                         : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
@@ -279,9 +371,34 @@ const AllTasks: React.FC<AllTasksProps> = ({
                     className={`w-full px-2 py-1 rounded border transition-colors resize-none ${
                       isDarkMode
                         ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
-                        : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
+                      : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'
                     }`}
                   />
+                  <input
+                    type="text"
+                    name="tags"
+                    value={editFormData.tags}
+                    onChange={handleEditChange}
+                    placeholder="Enter tags separated by commas"
+                    className={`w-full px-2 py-1 rounded border transition-colors ${
+                      isDarkMode
+                        ? 'bg-black border-white text-white placeholder-gray-500 focus:outline-none focus:border-gray-300'
+                        : 'bg-white border-black text-black placeholder-gray-400 focus:outline-none focus:border-gray-600'
+                    }`}
+                  />
+                  <div className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                    <input
+                      type="checkbox"
+                      name="today"
+                      checked={editFormData.today}
+                      onChange={handleEditChange}
+                      id={`today-edit-checkbox-${task.id}`}
+                      className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                    />
+                    <label htmlFor={`today-edit-checkbox-${task.id}`} className="text-sm font-medium">
+                      Add today tag
+                    </label>
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleEditSubmit}
@@ -315,6 +432,18 @@ const AllTasks: React.FC<AllTasksProps> = ({
                       {task.description}
                     </p>
                   )}
+                  {task.tags && task.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {task.tags.map(tag => (
+                        <span
+                          key={tag.id}
+                          className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}`}
+                        >
+                          {tag.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -336,8 +465,14 @@ const AllTasks: React.FC<AllTasksProps> = ({
                 >
                   <button
                     onClick={() => {
+                      const taskTagNames = (task.tags || []).map(tag => tag.name)
                       setEditingTaskId(task.id)
-                      setEditFormData({ title: task.title, description: task.description })
+                      setEditFormData({
+                        title: task.title,
+                        description: task.description,
+                        tags: taskTagNames.filter(tagName => tagName !== 'today').join(', '),
+                        today: taskTagNames.includes('today')
+                      })
                       setMenuOpenTaskId(null)
                     }}
                     className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${

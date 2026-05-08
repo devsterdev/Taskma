@@ -7,6 +7,7 @@ interface Task {
   description: string
   completed: boolean
   userId: number
+  tags?: { id: number; name: string }[]
 }
 
 interface CompletedTasksProps {

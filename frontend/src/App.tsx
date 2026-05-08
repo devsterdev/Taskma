@@ -8,14 +8,36 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is already logged in
     const token = localStorage.getItem('accessToken')
-    if (token) {
-      setCurrentPage('home')
-    } else {
+
+    if (!token) {
       setCurrentPage('auth')
+      setIsLoading(false)
+      return
     }
-    setIsLoading(false)
+
+    const validateToken = async () => {
+      try {
+        const response = await apiCall('/todo/read', {
+          method: 'GET',
+        })
+
+        if (response.ok) {
+          setCurrentPage('home')
+        } else {
+          localStorage.removeItem('accessToken')
+          setCurrentPage('auth')
+        }
+      } catch (error) {
+        console.error('Token validation failed:', error)
+        localStorage.removeItem('accessToken')
+        setCurrentPage('auth')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    validateToken()
   }, [])
 
   const handleLogout = async () => {
