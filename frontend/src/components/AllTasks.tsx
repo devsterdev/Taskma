@@ -265,7 +265,7 @@ const AllTasks: React.FC<AllTasksProps> = ({
                     name="title"
                     value={editFormData.title}
                     onChange={handleEditChange}
-                    className={`w-full px-2 py-1 rounded border transition-colors ${
+                    className={`w-full px -2 py-1 rounded border transition-colors ${
                       isDarkMode
                         ? 'bg-black border-white text-white focus:outline-none focus:border-gray-300'
                         : 'bg-white border-black text-black focus:outline-none focus:border-gray-600'

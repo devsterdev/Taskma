@@ -9,6 +9,7 @@ type TodoCreateInput = {
   description: string
   completed: boolean
   userId: number
+  tags: string[]
 }
 
 const adapter = new PrismaPg({
@@ -17,25 +18,42 @@ const adapter = new PrismaPg({
 
 export const createTodo = (data: Prisma.TodoCreateInput) => {
   return client.todo.create({
-    data
+    data, 
+    include: {
+      tags: true
+    }
   })
 }
 
 export const getTodos = (id: number) =>  {
   return client.todo.findMany({
-    where: {userId: id}
+    where: {userId: id},
+    include: {
+      tags: true
+    }
   })
 }
 
-export const findTodoAndUpdate = (id: number, updates: any) => {
+export const findTodoAndUpdate = (id: number, updates: Prisma.TodoUpdateInput) => {
   return client.todo.update({
     where: {id},
-    data: updates
+    data: updates,
+    include: {
+      tags: true
+    }
   })
 }
 
-export const deleteTodoById = (id: number) => {
+export const deleteTodoById = async (id: number) => {
+  const todo = await client.todo.findUnique({
+    where: { id }
+  })
+
+  if (!todo) {
+    return null
+  }
+
   return client.todo.delete({
-    where: {id}
+    where: { id }
   })
 }

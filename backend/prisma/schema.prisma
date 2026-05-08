@@ -13,15 +13,28 @@ model User {
   password     String
   createdAt    DateTime @default(now())
   refreshToken String
-  todo         Todo[]
+
+  todos         Todo[]
 }
 
 model Todo {
   id          Int     @id @default(autoincrement())
   title       String
   description String?
-  completed   Boolean
+  completed   Boolean @default(false)
+
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   userId      Int
   user        User    @relation(fields: [userId], references: [id])
+
+  tags         Tag[]
+}
+
+model Tag{
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+
+  todos  Todo[]
 }

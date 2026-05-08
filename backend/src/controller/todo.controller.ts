@@ -3,7 +3,7 @@ import { findUserByUserId } from "../db/user.db.js"
 import { createTodo, findTodoAndUpdate, getTodos, deleteTodoById } from "../db/todo.db.js"
 
 const addTodo = async(req: Request, res: Response) => {
-  const { title, description, completed } = req.body
+  const { title, description, tags } = req.body
   if (!req.user?.id) {
     return res.status(401).json({
       message: "Unauthorized request"
@@ -26,8 +26,20 @@ const addTodo = async(req: Request, res: Response) => {
     completed: false,
     user: {
       connect: { id: existedUser.id }
-    }
+    },
+    tags: {
+    connectOrCreate: tags.map((tag: string) => ({
+      where: {
+        name: tag
+      },
+      create: {
+        name: tag
+      }
+    }))
+  }
   })
+
+  
 
   return res.status(201).json({
     message: "Todo created successfully",
@@ -51,32 +63,61 @@ const getTodo = async(req: Request, res: Response) => {
     })
 }
 
-const  updateTodo = async(req: Request, res: Response) => {
-  const id  = Number(req.params.id)
-  const updates = req.body
+const updateTodo = async (req: Request, res: Response) => {
+  const id = Number(req.params.id)
+
+  const {
+    title,
+    description,
+    completed,
+    tags
+  } = req.body
+
   if (isNaN(id)) {
-    return res.status(400).json({ message: "Invalid ID" })
+    return res.status(400).json({
+      message: "Invalid ID"
+    })
   }
-  if (!updates || Object.keys(updates).length === 0) {
-    return res.status(400).json({ message: "No update data provided" })
-  }
-  try{
-    const todo = await findTodoAndUpdate(id, updates)
-    res
-      .status(200)
-      .json(todo)
-  }
-  catch(err: any){
-    return res
-      .status(500)
-      .json({ 
-        error: err.message
-      });
+
+  try {
+    const todo = await findTodoAndUpdate(id, {
+      title,
+      description,
+      completed,
+
+      ...(tags && {
+        tags: {
+          set: [],
+
+          connectOrCreate: tags.map((tag: string) => ({
+            where: {
+              name: tag
+            },
+
+            create: {
+              name: tag
+            }
+          }))
+        }
+      })
+    })
+
+    return res.status(200).json(todo)
+
+  } catch (err: any) {
+    return res.status(500).json({
+      error: err.message
+    })
   }
 }
 
 const deleteTodo = async(req: Request, res: Response) => {
   const id  = Number(req.params.id)
+  if (isNaN(id)) {
+  return res.status(400).json({
+      message: "Invalid ID"
+    })
+  }
   try{
     const todo = await deleteTodoById(id)
     return res
