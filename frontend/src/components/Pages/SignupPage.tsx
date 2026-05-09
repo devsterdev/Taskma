@@ -250,6 +250,10 @@ const genderOptions = [
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  required
+                  inputMode="email"
+                  autoComplete="email"
+                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                   placeholder="Enter your email"
                   className={`w-full pl-10 pr-4 py-2 border-2 ${
                     errors.email ? 'border-red-500' : 'border-black'

@@ -4,14 +4,14 @@ import cors from "cors"
 let app = express();
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: true,
   credentials: true
 }))
 app.use(express.json({ limit: "16kb" }))
 
 app.get('/', (req, res) => {
   res.json({
-    message: "hello"
+    message: "working"
   })
 })
 
