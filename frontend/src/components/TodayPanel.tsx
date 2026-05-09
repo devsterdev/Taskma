@@ -18,7 +18,9 @@ interface TodayPanelProps {
   todayTasks?: Task[]
   completedTasks?: Task[]
   onTaskComplete?: (task: Task) => Promise<void>
-  onTaskCreated?: () => Promise<void>
+  onTaskCreateStart?: (task: Task) => void
+  onTaskCreateSuccess?: (temporaryTaskId: number, savedTask: Task) => void
+  onTaskCreateFailure?: (temporaryTaskId: number) => void
 }
 
 const TodayPanel: React.FC<TodayPanelProps> = ({
@@ -26,15 +28,18 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
   todayTasks = [],
   completedTasks = [],
   onTaskComplete,
-  onTaskCreated
+  onTaskCreateStart,
+  onTaskCreateSuccess,
+  onTaskCreateFailure
 }) => {
   const [expandedCompleted, setExpandedCompleted] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', description: '' })
+  const [isCreating, setIsCreating] = useState(false)
 
   const panelClass = isDarkMode
-    ? 'border-zinc-700 bg-[#121212] text-zinc-100'
-    : 'border-zinc-300 bg-white text-zinc-950'
+    ? 'border-zinc-950 bg-[#121212] text-zinc-100'
+    : 'border-zinc-200 bg-white text-zinc-950'
   const mutedClass = isDarkMode ? 'text-zinc-400' : 'text-zinc-600'
   const inputClass = `w-full rounded-md border px-3 py-2 text-sm transition-colors ${
     isDarkMode
@@ -61,37 +66,52 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
   }
 
   const handleAddTodayTask = async () => {
-    if (!newTask.title.trim()) {
+    if (!newTask.title.trim() || isCreating) {
       return
     }
+
+    const temporaryTaskId = -Date.now()
+    const optimisticTask: Task = {
+      id: temporaryTaskId,
+      title: newTask.title.trim(),
+      description: newTask.description,
+      completed: false,
+      userId: 0,
+      tags: [{ id: temporaryTaskId - 1, name: 'today' }]
+    }
+
+    onTaskCreateStart?.(optimisticTask)
+    setNewTask({ title: '', description: '' })
+    setShowAddForm(false)
+    setIsCreating(true)
 
     try {
       const response = await apiCall('/todo/add', {
         method: 'POST',
         body: JSON.stringify({
-          title: newTask.title,
-          description: newTask.description,
+          title: optimisticTask.title,
+          description: optimisticTask.description,
           tags: ['today']
         })
       })
 
       if (response.ok) {
-        setNewTask({ title: '', description: '' })
-        setShowAddForm(false)
-        await onTaskCreated?.()
+        const data = await response.json()
+        onTaskCreateSuccess?.(temporaryTaskId, data.todo || data)
       } else {
-        alert('Failed to create task')
+        console.error('Failed to create task')
+        onTaskCreateFailure?.(temporaryTaskId)
       }
     } catch (error) {
       console.error('Error creating task:', error)
-      alert('An error occurred while creating the task')
+      onTaskCreateFailure?.(temporaryTaskId)
+    } finally {
+      setIsCreating(false)
     }
   }
 
   return (
-    <div className={`relative h-full w-full overflow-hidden rounded-2xl border ${panelClass}`}>
-      <div className={`absolute left-1/2 top-1 h-1 w-9 -translate-x-1/2 rounded-full ${isDarkMode ? 'bg-zinc-600' : 'bg-zinc-300'}`} />
-
+    <div className={`h-full w-full overflow-hidden border ${panelClass}`}>
       <div className="flex h-full flex-col px-4 py-4">
         <header className="mb-5">
           <h2 className="text-xl font-normal">Today</h2>
@@ -144,20 +164,22 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
+                  disabled={isCreating}
                   className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                     isDarkMode ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
-                  }`}
+                  } disabled:cursor-not-allowed disabled:opacity-70`}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleAddTodayTask}
+                  disabled={isCreating}
                   className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                     isDarkMode ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-950 text-white hover:bg-zinc-800'
-                  }`}
+                  } disabled:cursor-not-allowed disabled:opacity-70`}
                 >
-                  Add
+                  {isCreating ? 'Creating...' : 'Add'}
                 </button>
               </div>
             </div>

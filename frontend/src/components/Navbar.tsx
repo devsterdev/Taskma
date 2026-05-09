@@ -4,10 +4,21 @@ import { Github, LogOut, Moon, Sun, User } from 'lucide-react'
 interface NavbarProps {
   isDarkMode?: boolean
   onThemeToggle?: (isDark: boolean) => void
-  onLogout?: () => void
+  onLogout?: () => void | Promise<void>
+  isLoggingOut?: boolean
+  currentUser?: {
+    name: string
+    email: string
+  } | null
 }
 
-const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle, onLogout }) => {
+const Navbar: React.FC<NavbarProps> = ({
+  isDarkMode = false,
+  onThemeToggle,
+  onLogout,
+  isLoggingOut = false,
+  currentUser
+}) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const handleThemeToggle = () => {
@@ -84,8 +95,8 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle, onLo
               className={`absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-lg border shadow-lg ${dropdownClass}`}
             >
               <div className={`border-b px-4 py-3 ${dropdownBorderClass}`}>
-                <p className="text-sm font-semibold">John Doe</p>
-                <p className={`text-xs ${mutedClass}`}>john@example.com</p>
+                <p className="truncate text-sm font-semibold">{currentUser?.name || 'User'}</p>
+                <p className={`truncate text-xs ${mutedClass}`}>{currentUser?.email || 'No email found'}</p>
               </div>
 
               <button
@@ -110,14 +121,15 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode = false, onThemeToggle, onLo
               <button
                 type="button"
                 onClick={onLogout}
+                disabled={isLoggingOut}
                 className={`flex w-full items-center gap-2 border-t px-4 py-3 text-left text-sm transition-colors ${
                   isDarkMode
                     ? 'border-zinc-800 text-red-300 hover:bg-zinc-800'
                     : 'border-zinc-200 text-red-600 hover:bg-red-50'
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-70`}
               >
                 <LogOut size={15} />
-                Logout
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
               </button>
             </div>
           )}

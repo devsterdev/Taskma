@@ -136,7 +136,7 @@ const signInUser = async(req: Request, res: Response) => {
 
 const logOutUser = async(req: Request, res: Response) => {
   try {
-    const user = (req as Request & { user?: { id: number } }).user;
+    const user = req.user;
 
     if (!user?.id) {
       return res.status(401).json({
@@ -156,6 +156,28 @@ const logOutUser = async(req: Request, res: Response) => {
   }
 }
 
+const getUserProfile = async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+
+    if (!user?.id) {
+      return res.status(401).json({
+        message: "Unauthorized request"
+      });
+    }
+
+    return res.status(200).json({
+      message: "User profile fetched successfully",
+      user,
+    });
+  } catch (e: any) {
+    console.error("Get user profile error:", e);
+
+    return res.status(500).json({
+      message: "Unable to fetch user profile"
+    });
+  }
+}
 
 
-export {registerUser, signInUser, logOutUser}
+export {registerUser, signInUser, logOutUser, getUserProfile}

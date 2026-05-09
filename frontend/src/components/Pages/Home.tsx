@@ -14,7 +14,20 @@ interface Task {
   tags?: { id: number; name: string }[]
 }
 
-const Home = ({ onLogout }: { onLogout: () => void }) => {
+interface CurrentUser {
+  name: string
+  email: string
+}
+
+const Home = ({
+  onLogout,
+  isLoggingOut,
+  currentUser
+}: {
+  onLogout: () => void | Promise<void>
+  isLoggingOut?: boolean
+  currentUser: CurrentUser | null
+}) => {
   const [tasks, setTasks] = useState<Task[]>([])
   const [uniqueTags, setUniqueTags] = useState<string[]>(['today'])
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>({ today: true })
@@ -91,26 +104,77 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
     })
   }
 
+  const addTaskToView = (task: Task) => {
+    setTasks(prevTasks => [task, ...prevTasks])
+
+    const taskTags = (task.tags || []).map(tag => tag.name)
+    if (taskTags.length > 0) {
+      setUniqueTags(prevTags => Array.from(new Set([...prevTags, ...taskTags])))
+      setTagFilters(prevFilters => {
+        const nextFilters = { ...prevFilters }
+        taskTags.forEach(tag => {
+          nextFilters[tag] = prevFilters[tag] ?? true
+        })
+        return nextFilters
+      })
+    }
+  }
+
+  const replaceTaskInView = (temporaryTaskId: number, savedTask: Task) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task => (task.id === temporaryTaskId ? savedTask : task))
+    )
+
+    const taskTags = (savedTask.tags || []).map(tag => tag.name)
+    if (taskTags.length > 0) {
+      setUniqueTags(prevTags => Array.from(new Set([...prevTags, ...taskTags])))
+    }
+  }
+
+  const removeTaskFromView = (taskId: number) => {
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId))
+  }
+
   const handleTaskComplete = async (task: Task) => {
+    const nextCompleted = !task.completed
+
+    setTasks(prevTasks =>
+      prevTasks.map(prevTask =>
+        prevTask.id === task.id ? { ...prevTask, completed: nextCompleted } : prevTask
+      )
+    )
+
     try {
       const response = await apiCall(`/todo/update/${task.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ completed: !task.completed })
+        body: JSON.stringify({ completed: nextCompleted })
       })
 
       if (response.status === 401) {
+        setTasks(prevTasks =>
+          prevTasks.map(prevTask =>
+            prevTask.id === task.id ? { ...prevTask, completed: task.completed } : prevTask
+          )
+        )
         onLogout()
         return
       }
 
-      if (response.ok) {
-        await fetchTasks()
-      } else {
-        alert('Failed to update task status')
+      if (!response.ok) {
+        console.error('Failed to update task status')
+        setTasks(prevTasks =>
+          prevTasks.map(prevTask =>
+            prevTask.id === task.id ? { ...prevTask, completed: task.completed } : prevTask
+          )
+        )
       }
     } catch (error) {
       console.error('Error updating task:', error)
-      alert('An error occurred while updating the task')
+      setTasks(prevTasks =>
+        prevTasks.map(prevTask =>
+          prevTask.id === task.id ? { ...prevTask, completed: task.completed } : prevTask
+        )
+      )
     }
   }
 
@@ -141,7 +205,13 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'}`}>
       {/* NAVBAR */}
-      <Navbar isDarkMode={isDarkMode} onThemeToggle={setIsDarkMode} onLogout={onLogout} />
+      <Navbar
+        isDarkMode={isDarkMode}
+        onThemeToggle={setIsDarkMode}
+        onLogout={onLogout}
+        isLoggingOut={isLoggingOut}
+        currentUser={currentUser}
+      />
 
       {/* MAIN CONTENT */}
       <div className="flex flex-1 overflow-hidden">
@@ -164,6 +234,9 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
           isDarkMode={isDarkMode}
           handleTaskComplete={handleTaskComplete}
           onTaskCreated={fetchTasks}
+          onTaskCreateStart={addTaskToView}
+          onTaskCreateSuccess={replaceTaskInView}
+          onTaskCreateFailure={removeTaskFromView}
         />
 
         <div className="w-96 min-h-0 flex flex-col overflow-hidden">
@@ -172,7 +245,9 @@ const Home = ({ onLogout }: { onLogout: () => void }) => {
             todayTasks={todayTasks}
             completedTasks={completedTasks}
             onTaskComplete={handleTaskComplete}
-            onTaskCreated={fetchTasks}
+            onTaskCreateStart={addTaskToView}
+            onTaskCreateSuccess={replaceTaskInView}
+            onTaskCreateFailure={removeTaskFromView}
           />
         </div>
       </div>

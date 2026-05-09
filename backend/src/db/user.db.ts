@@ -34,8 +34,7 @@ export const findUserByUserId = (id: number) => {
       id: true,
       email: true,
       name: true,
-      createdAt: true,
-      refreshToken: true
+      createdAt: true
     }
   })
 }

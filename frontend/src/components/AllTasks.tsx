@@ -17,6 +17,9 @@ interface AllTasksProps {
   isDarkMode: boolean
   handleTaskComplete: (task: Task) => Promise<void>
   onTaskCreated: () => Promise<void>
+  onTaskCreateStart: (task: Task) => void
+  onTaskCreateSuccess: (temporaryTaskId: number, savedTask: Task) => void
+  onTaskCreateFailure: (temporaryTaskId: number) => void
 }
 
 export interface AllTasksHandle {
@@ -29,6 +32,9 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
   isDarkMode,
   handleTaskComplete,
   onTaskCreated,
+  onTaskCreateStart,
+  onTaskCreateSuccess,
+  onTaskCreateFailure,
 }, ref) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '', tags: '', today: false })
@@ -36,6 +42,9 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
   const [editFormData, setEditFormData] = useState({ title: '', description: '', tags: '', today: false })
   const [hoveredTaskId, setHoveredTaskId] = useState<number | null>(null)
   const [menuOpenTaskId, setMenuOpenTaskId] = useState<number | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null)
 
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -99,6 +108,11 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
     openCreateForm: handleAddTaskClick
   }))
 
+  const sortedTasks = React.useMemo(
+    () => [...allTasks].sort((a, b) => Number(a.completed) - Number(b.completed)),
+    [allTasks]
+  )
+
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement
 
@@ -150,38 +164,55 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
   }
 
   const handleSubmit = async () => {
-    if (formData.title.trim()) {
-      try {
-        const parsedTags = parseTags(formData.tags, formData.today)
+    if (formData.title.trim() && !isCreating) {
+      const parsedTags = parseTags(formData.tags, formData.today)
+      const temporaryTaskId = -Date.now()
+      const optimisticTask: Task = {
+        id: temporaryTaskId,
+        title: formData.title.trim(),
+        description: formData.description,
+        completed: false,
+        userId: 0,
+        tags: parsedTags.map((tag, index) => ({
+          id: temporaryTaskId - index - 1,
+          name: tag
+        }))
+      }
 
+      onTaskCreateStart(optimisticTask)
+      setFormData({ title: '', description: '', tags: '', today: false })
+      setShowAddForm(false)
+      setIsCreating(true)
+
+      try {
         const response = await apiCall('/todo/add', {
           method: 'POST',
           body: JSON.stringify({
-            title: formData.title,
-            description: formData.description,
+            title: optimisticTask.title,
+            description: optimisticTask.description,
             tags: parsedTags
           })
         })
 
         if (response.ok) {
           const data = await response.json()
-          console.log('Task created:', data)
-          setFormData({ title: '', description: '', tags: '', today: false })
-          setShowAddForm(false)
-          alert('Task created successfully!')
-          await onTaskCreated()
+          onTaskCreateSuccess(temporaryTaskId, data.todo || data)
         } else {
-          alert('Failed to create task')
+          console.error('Failed to create task')
+          onTaskCreateFailure(temporaryTaskId)
         }
       } catch (error) {
         console.error('Error creating task:', error)
-        alert('An error occurred while creating the task')
+        onTaskCreateFailure(temporaryTaskId)
+      } finally {
+        setIsCreating(false)
       }
     }
   }
 
   const handleEditSubmit = async () => {
-    if (editingTaskId && editFormData.title.trim()) {
+    if (editingTaskId && editFormData.title.trim() && !isUpdating) {
+      setIsUpdating(true)
       try {
         const response = await apiCall(`/todo/update/${editingTaskId}`, {
           method: 'PATCH',
@@ -195,34 +226,36 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
         if (response.ok) {
           setEditingTaskId(null)
           setEditFormData({ title: '', description: '', tags: '', today: false })
-          alert('Task updated successfully!')
           await onTaskCreated()
         } else {
-          alert('Failed to update task')
+          console.error('Failed to update task')
         }
       } catch (error) {
         console.error('Error updating task:', error)
-        alert('An error occurred while updating the task')
+      } finally {
+        setIsUpdating(false)
       }
     }
   }
 
   const handleDelete = async (taskId: number) => {
     if (confirm('Are you sure you want to delete this task?')) {
+      setDeletingTaskId(taskId)
       try {
         const response = await apiCall(`/todo/delete/${taskId}`, {
           method: 'DELETE'
         })
 
         if (response.ok) {
-          alert('Task deleted successfully!')
           await onTaskCreated()
         } else {
-          alert('Failed to delete task')
+          console.error('Failed to delete task')
         }
       } catch (error) {
         console.error('Error deleting task:', error)
-        alert('An error occurred while deleting the task')
+      } finally {
+        setDeletingTaskId(null)
+        setMenuOpenTaskId(null)
       }
     }
   }
@@ -313,8 +346,8 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
               <button type="button" onClick={() => setShowAddForm(false)} className={secondaryButtonClass}>
                 Cancel
               </button>
-              <button type="button" onClick={handleSubmit} className={primaryButtonClass}>
-                Add Task
+              <button type="button" onClick={handleSubmit} disabled={isCreating} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
+                {isCreating ? 'Creating...' : 'Add Task'}
               </button>
             </div>
           </div>
@@ -322,10 +355,10 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
       )}
 
       <div className="space-y-1">
-        {allTasks.length === 0 ? (
+        {sortedTasks.length === 0 ? (
           <p className={`py-8 text-sm ${mutedClass}`}>No tasks yet</p>
         ) : (
-          allTasks.map(task => (
+          sortedTasks.map(task => (
             <div
               key={task.id}
               className={`group relative flex items-start gap-4 rounded-md py-2 pr-9 transition-colors ${
@@ -382,10 +415,10 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
                     Today
                   </label>
                   <div className="flex gap-2">
-                    <button type="button" onClick={handleEditSubmit} className={primaryButtonClass}>
-                      Submit
+                    <button type="button" onClick={handleEditSubmit} disabled={isUpdating} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
+                      {isUpdating ? 'Saving...' : 'Submit'}
                     </button>
-                    <button type="button" onClick={() => setEditingTaskId(null)} className={secondaryButtonClass}>
+                    <button type="button" onClick={() => setEditingTaskId(null)} disabled={isUpdating} className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
                       Cancel
                     </button>
                   </div>
@@ -449,16 +482,14 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      handleDelete(task.id)
-                      setMenuOpenTaskId(null)
-                    }}
+                    onClick={() => handleDelete(task.id)}
+                    disabled={deletingTaskId === task.id}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
                       isDarkMode ? 'text-red-300 hover:bg-zinc-800' : 'text-red-600 hover:bg-red-50'
-                    }`}
+                    } disabled:cursor-not-allowed disabled:opacity-70`}
                   >
                     <Trash2 size={14} />
-                    Delete
+                    {deletingTaskId === task.id ? 'Deleting...' : 'Delete'}
                   </button>
                 </div>
               )}

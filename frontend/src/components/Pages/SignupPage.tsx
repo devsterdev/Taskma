@@ -2,7 +2,18 @@ import React, { useState } from 'react'
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
 import { apiCall } from '../../utils/api'
 
-const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth') => void }) => {
+interface CurrentUser {
+  name: string
+  email: string
+}
+
+const SignupPage = ({
+  setCurrentPage,
+  setCurrentUser
+}: {
+  setCurrentPage: (page: 'home' | 'auth') => void
+  setCurrentUser: (user: CurrentUser | null) => void
+}) => {
   const [isSignup, setIsSignup] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -15,6 +26,7 @@ const SignupPage = ({ setCurrentPage }: { setCurrentPage: (page: 'home' | 'auth'
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
 const genderOptions = [
   'Male',
@@ -113,6 +125,10 @@ const genderOptions = [
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) {
+      return
+    }
+
     const newErrors = validateForm()
 
     if (Object.keys(newErrors).length > 0) {
@@ -120,10 +136,17 @@ const genderOptions = [
       return
     }
 
-    if (isSignup) {
-      await registerUser();
-    } else {
-      await signInUser();
+    setErrors({})
+    setIsSubmitting(true)
+
+    try {
+      if (isSignup) {
+        await registerUser();
+      } else {
+        await signInUser();
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -141,14 +164,15 @@ const genderOptions = [
       const data = await response.json()
       if (response.ok) {
         localStorage.setItem("accessToken", data.accessToken);
-        alert('Registration successful!')
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
+        setCurrentUser(data.user);
         setCurrentPage('home')
       } else {
-        alert(data.message || 'Registration failed. Please try again.')
+        setErrors({ form: data.message || 'Registration failed. Please try again.' })
       }
     } catch (error) {
       console.error('Error during registration:', error)
-      alert('An error occurred. Please try again later.')
+      setErrors({ form: 'An error occurred. Please try again later.' })
     }
   }
 
@@ -165,14 +189,15 @@ const genderOptions = [
       const data = await response.json()
       if (response.ok) {
         localStorage.setItem("accessToken", data.accessToken);
-        alert('Sign in successful!')
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
+        setCurrentUser(data.user);
         setCurrentPage('home')
       } else {
-        alert(data.message || 'Sign in failed. Please try again.')
+        setErrors({ form: data.message || 'Sign in failed. Please try again.' })
       }
     } catch (error) {
       console.error('Error during sign in:', error)
-      alert('An error occurred. Please try again later.')
+      setErrors({ form: 'An error occurred. Please try again later.' })
     }
   }
 
@@ -325,12 +350,15 @@ const genderOptions = [
               </div>
             )}
 
+            {errors.form && <p className="text-red-500 text-sm">{errors.form}</p>}
+
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-black hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+              disabled={isSubmitting}
+              className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg transition-colors"
             >
-              {isSignup ? 'Sign Up' : 'Sign In'}
+              {isSubmitting ? (isSignup ? 'Signing up...' : 'Signing in...') : (isSignup ? 'Sign Up' : 'Sign In')}
             </button>
           </form>
 
@@ -339,12 +367,14 @@ const genderOptions = [
             <p className="text-black">
               {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
+                type="button"
+                disabled={isSubmitting}
                 onClick={() => {
                   setIsSignup(!isSignup)
                   setFormData({ name: '', email: '', password: '', confirmPassword: ''})
                   setErrors({})
                 }}
-                className="font-bold text-black hover:text-gray-700 underline"
+                className="font-bold text-black hover:text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed underline"
               >
                 {isSignup ? 'Sign In' : 'Sign Up'}
               </button>
