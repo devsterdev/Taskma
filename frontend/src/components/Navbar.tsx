@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { GitBranch, LogOut, Moon, Sun, User } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { LogOut, Moon, Sun, User } from 'lucide-react'
 
 interface NavbarProps {
   isDarkMode?: boolean
@@ -20,10 +20,32 @@ const Navbar: React.FC<NavbarProps> = ({
   currentUser
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
 
   const handleThemeToggle = () => {
     onThemeToggle?.(!isDarkMode)
   }
+
+  useEffect(() => {
+    if (!showProfileMenu) {
+      return
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+    }
+  }, [showProfileMenu])
 
   const navClass = isDarkMode
     ? 'border-zinc-950 bg-[#121212] text-zinc-100'
@@ -75,10 +97,24 @@ const Navbar: React.FC<NavbarProps> = ({
           title="Visit GitHub"
           aria-label="Visit GitHub"
         >
-          <GitBranch size={18} />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+          </svg>
         </a>
 
-        <div className="relative">
+        <div ref={profileMenuRef} className="relative">
           <button
             type="button"
             onClick={() => setShowProfileMenu(!showProfileMenu)}
