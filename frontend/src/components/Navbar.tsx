@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Github, LogOut, Moon, Sun, User } from 'lucide-react'
+import { GitBranch, LogOut, Moon, Sun, User } from 'lucide-react'
 
 interface NavbarProps {
   isDarkMode?: boolean
@@ -75,7 +75,7 @@ const Navbar: React.FC<NavbarProps> = ({
           title="Visit GitHub"
           aria-label="Visit GitHub"
         >
-          <Github size={18} />
+          <GitBranch size={18} />
         </a>
 
         <div className="relative">
