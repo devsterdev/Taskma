@@ -1,4 +1,5 @@
-import { Check, CheckCircle2, ChevronUp, Menu, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Plus } from 'lucide-react'
 
 interface TagSidebarProps {
   tags: string[]
@@ -19,6 +20,7 @@ const TagSidebar = ({
   isDarkMode,
   onCreate,
 }: TagSidebarProps) => {
+  const [showLists, setShowLists] = useState(true)
   const visibleTags = tags.filter(tag => tag !== 'today')
   const isAllSelected = Object.values(tagFilters).every(Boolean)
   const panelClass = isDarkMode
@@ -27,12 +29,6 @@ const TagSidebar = ({
   const mutedClass = isDarkMode ? 'text-zinc-400' : 'text-zinc-600'
   const softRowClass = isDarkMode ? 'hover:bg-[#181818]' : 'hover:bg-zinc-50'
   const activeRowClass = isDarkMode ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-950 text-white'
-  const createButtonClass = isDarkMode
-    ? 'bg-zinc-100 text-zinc-950 shadow-black/30 hover:bg-white'
-    : 'bg-zinc-950 text-white shadow-zinc-300/70 hover:bg-zinc-800'
-  const createIconClass = isDarkMode
-    ? 'bg-zinc-950 text-white'
-    : 'bg-white text-zinc-950'
   const renderListCheckbox = (checked: boolean) => (
     <span
       className={`flex h-[18px] w-[18px] items-center justify-center rounded-sm border transition-colors ${
@@ -53,23 +49,10 @@ const TagSidebar = ({
   return (
     <aside className={`w-[17rem] shrink-0 overflow-y-auto border-r px-3 py-5 ${panelClass}`}>
       <div className="mb-8 flex items-center gap-5 px-4">
-        <Menu size={21} />
         <div className="flex items-center gap-2">
-          <CheckCircle2 size={32} />
           <span className="text-xl font-semibold">Tasks</span>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onCreate}
-        className={`mb-8 flex h-13 w-full items-center gap-3 rounded-lg px-4 text-sm font-semibold shadow-md transition-colors ${createButtonClass}`}
-      >
-        <span className={`flex h-8 w-8 items-center justify-center rounded-md ${createIconClass}`}>
-          <Plus size={18} strokeWidth={2.5} />
-        </span>
-        <span>Create task</span>
-      </button>
 
       <div className="mb-8 space-y-1">
         <button
@@ -86,12 +69,38 @@ const TagSidebar = ({
       </div>
 
       <div className="px-4">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-semibold">Lists</p>
-          <ChevronUp size={18} className={mutedClass} />
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowLists(prev => !prev)}
+          className={`mb-4 flex w-full items-center justify-between rounded-md py-1 text-left transition-colors ${softRowClass}`}
+          aria-expanded={showLists}
+          aria-controls="tag-list-section"
+        >
+          <span className="text-sm font-semibold">Lists</span>
+          {showLists ? (
+            <ChevronUp size={18} className={mutedClass} />
+          ) : (
+            <ChevronDown size={18} className={mutedClass} />
+          )}
+        </button>
 
-        <div className="space-y-2">
+        {showLists && (
+        <div id="tag-list-section" className="space-y-2">
+          <button
+            type="button"
+            onClick={onCreate}
+            className={`mb-3 flex w-full items-center gap-4 rounded-md py-1 text-left text-sm font-medium transition-colors ${
+              isDarkMode ? 'text-blue-200 hover:bg-[#181818] hover:text-white' : 'text-zinc-700 hover:bg-zinc-50 hover:text-black'
+            }`}
+          >
+            <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border ${
+              isDarkMode ? 'border-blue-200 text-blue-200' : 'border-zinc-700 text-zinc-700'
+            }`}>
+              <Plus size={13} />
+            </span>
+            Create task
+          </button>
+
           <button
             type="button"
             onClick={() => onToggleTag('today')}
@@ -121,6 +130,7 @@ const TagSidebar = ({
             </button>
           ))}
         </div>
+        )}
       </div>
 
     </aside>

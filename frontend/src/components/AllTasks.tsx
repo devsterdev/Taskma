@@ -315,22 +315,28 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
               placeholder="Task title"
               className={inputClass}
             />
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleFormChange}
-              placeholder="Optional note"
-              rows={2}
-              className={`${inputClass} resize-none`}
-            />
-            <input
-              type="text"
-              name="tags"
-              value={formData.tags}
-              onChange={handleFormChange}
-              placeholder="Tags separated by commas"
-              className={inputClass}
-            />
+            <label className="block space-y-1.5">
+              <span className={`text-xs font-medium ${mutedClass}`}>Description</span>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleFormChange}
+                placeholder="Optional note"
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className={`text-xs font-medium ${mutedClass}`}>Tags</span>
+              <input
+                type="text"
+                name="tags"
+                value={formData.tags}
+                onChange={handleFormChange}
+                placeholder="Tags separated by commas"
+                className={inputClass}
+              />
+            </label>
             <label className={`flex items-center gap-2 text-sm ${mutedClass}`}>
               <input
                 type="checkbox"
