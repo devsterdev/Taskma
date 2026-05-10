@@ -15,12 +15,18 @@ const getJwtSecrets = () => {
   return { accessTokenSecret, refreshTokenSecret };
 }
 
-const isProduction = process.env.NODE_ENV === "production";
+const getCookieOptions = (req: Request): CookieOptions => {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const isHttpsRequest =
+    req.secure ||
+    forwardedProto === "https" ||
+    req.hostname !== "localhost";
 
-const cookieOptions: CookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "none" : "lax" as const,
+  return {
+    httpOnly: true,
+    secure: isHttpsRequest,
+    sameSite: isHttpsRequest ? "none" : "lax",
+  };
 };
 
 const generateAccessAndRefreshTokens = (userId: number) => {
@@ -72,6 +78,7 @@ const registerUser = async (req: Request, res: Response) => {
 
     const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user.id);
     const safeUser = await updateUser(user.id, refreshToken);
+    const cookieOptions = getCookieOptions(req);
 
     return res
     .cookie("accessToken", accessToken, {
@@ -134,6 +141,7 @@ const signInUser = async(req: Request, res: Response) => {
 
     const { accessToken, refreshToken } = generateAccessAndRefreshTokens(existedUser.id);
     const safeUser = await updateUser(existedUser.id, refreshToken);
+    const cookieOptions = getCookieOptions(req);
 
     return res
     .cookie("accessToken", accessToken, {
@@ -175,6 +183,7 @@ const logOutUser = async(req: Request, res: Response) => {
     }
 
     await updateUser(user.id, "");
+    const cookieOptions = getCookieOptions(req);
 
     return res
       .clearCookie("accessToken", cookieOptions)
