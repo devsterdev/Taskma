@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { createUser, findUserByEmail, updateUser } from "../db/user.db.js"
-import type { Request, Response } from "express";
+import type { CookieOptions, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken'
 
@@ -15,10 +15,12 @@ const getJwtSecrets = () => {
   return { accessTokenSecret, refreshTokenSecret };
 }
 
-const cookieOptions = {
+const isProduction = process.env.NODE_ENV === "production";
+
+const cookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: false,
-  sameSite: "strict" as const,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax" as const,
 };
 
 const generateAccessAndRefreshTokens = (userId: number) => {
