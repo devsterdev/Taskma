@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import Home from './components/Pages/Home'
 import SignupPage from './components/Pages/SignupPage'
 import { apiCall } from './utils/api'
@@ -75,6 +76,7 @@ function App() {
       ) : (
         <Home onLogout={handleLogout} isLoggingOut={isLoggingOut} currentUser={currentUser} />
       )}
+      <Analytics />
     </div>
   )
 }
