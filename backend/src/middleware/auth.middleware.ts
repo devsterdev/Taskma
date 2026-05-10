@@ -5,7 +5,7 @@ import { findUserByUserId } from '../db/user.db.js';
 
 export const verifyJWT = async (req: Request, res: Response, next:NextFunction) => {
   try{
-    const token = req.header("Authorization")?.replace("Bearer ", "")
+    const token = req.cookies?.accessToken
     if(!token){
       return res.status(401).
         json({

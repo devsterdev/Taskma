@@ -122,7 +122,7 @@ const deleteTodo = async(req: Request, res: Response) => {
     const todo = await deleteTodoById(id)
     return res
       .status(200)
-      .json(todo)
+      // .json(todo)
   }
   catch(err: any){
     return res

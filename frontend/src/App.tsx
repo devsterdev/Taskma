@@ -15,15 +15,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
-
-    if (!token) {
-      setCurrentPage('auth')
-      setIsLoading(false)
-      return
-    }
-
-    const validateToken = async () => {
+    const validateSession = async () => {
       try {
         const response = await apiCall('/user/profile', {
           method: 'GET',
@@ -35,14 +27,12 @@ function App() {
           localStorage.setItem('currentUser', JSON.stringify(data.user))
           setCurrentPage('home')
         } else {
-          localStorage.removeItem('accessToken')
           localStorage.removeItem('currentUser')
           setCurrentUser(null)
           setCurrentPage('auth')
         }
       } catch (error) {
-        console.error('Token validation failed:', error)
-        localStorage.removeItem('accessToken')
+        console.error('Session validation failed:', error)
         localStorage.removeItem('currentUser')
         setCurrentUser(null)
         setCurrentPage('auth')
@@ -51,7 +41,7 @@ function App() {
       }
     }
 
-    validateToken()
+    validateSession()
   }, [])
 
   const handleLogout = async () => {
@@ -67,7 +57,6 @@ function App() {
     } catch (error) {
       console.error('Error during logout:', error)
     } finally {
-      localStorage.removeItem('accessToken')
       localStorage.removeItem('currentUser')
       setCurrentUser(null)
       setCurrentPage('auth')

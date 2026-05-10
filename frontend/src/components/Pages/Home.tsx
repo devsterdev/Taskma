@@ -57,7 +57,6 @@ const Home = ({
 
       if (response.ok) {
         const data = await response.json()
-        console.log(data)
         const todos: Task[] = data.todos || data
         setTasks(todos)
 

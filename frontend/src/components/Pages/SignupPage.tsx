@@ -163,7 +163,6 @@ const genderOptions = [
 
       const data = await response.json()
       if (response.ok) {
-        localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("currentUser", JSON.stringify(data.user));
         setCurrentUser(data.user);
         setCurrentPage('home')
@@ -188,7 +187,6 @@ const genderOptions = [
 
       const data = await response.json()
       if (response.ok) {
-        localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("currentUser", JSON.stringify(data.user));
         setCurrentUser(data.user);
         setCurrentPage('home')

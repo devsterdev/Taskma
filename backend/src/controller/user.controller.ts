@@ -15,6 +15,12 @@ const getJwtSecrets = () => {
   return { accessTokenSecret, refreshTokenSecret };
 }
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: false,
+  sameSite: "strict" as const,
+};
+
 const generateAccessAndRefreshTokens = (userId: number) => {
   const { accessTokenSecret, refreshTokenSecret } = getJwtSecrets();
 
@@ -65,12 +71,23 @@ const registerUser = async (req: Request, res: Response) => {
     const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user.id);
     const safeUser = await updateUser(user.id, refreshToken);
 
-    return res.status(201).json({
-      accessToken,
-      refreshToken,
-      message: "User created successfully",
-      user: safeUser,
-    });
+    return res
+    .cookie("accessToken", accessToken, {
+      ...cookieOptions,
+      maxAge: 60 * 60 * 1000 // 1 hour
+    })
+
+    .cookie("refreshToken", refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    })
+
+  .status(200)
+
+  .json({
+    message: "User signin successfully",
+    user: safeUser
+  })
   }
   catch (e: any) {
     console.error("Register user error:", e);
@@ -116,12 +133,23 @@ const signInUser = async(req: Request, res: Response) => {
     const { accessToken, refreshToken } = generateAccessAndRefreshTokens(existedUser.id);
     const safeUser = await updateUser(existedUser.id, refreshToken);
 
-    return res.status(200).json({
-      accessToken,
-      refreshToken,
+    return res
+    .cookie("accessToken", accessToken, {
+      ...cookieOptions,
+      maxAge: 60 * 60 * 1000 // 1 hour
+    })
+
+    .cookie("refreshToken", refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    })
+
+    .status(200)
+
+    .json({
       message: "User signin successfully",
-      user: safeUser,
-    });
+      user: safeUser
+    })
 
   }
   catch(e: any){
@@ -146,9 +174,13 @@ const logOutUser = async(req: Request, res: Response) => {
 
     await updateUser(user.id, "");
 
-    return res.status(200).json({
-      message: "User logged out successfully"
-    });
+    return res
+      .clearCookie("accessToken", cookieOptions)
+      .clearCookie("refreshToken", cookieOptions)
+      .status(200)
+      .json({
+        message: "User logged out successfully"
+      });
   } catch (e: any) {
     return res.status(500).json({
       message: "Unable to logout user"
