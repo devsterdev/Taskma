@@ -19,6 +19,22 @@ interface CurrentUser {
   email: string
 }
 
+const THEME_STORAGE_KEY = 'taskma-theme'
+
+const getInitialTheme = () => {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+
+  if (savedTheme === 'dark') {
+    return true
+  }
+
+  if (savedTheme === 'light') {
+    return false
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
 const Home = ({
   onLogout,
   isLoggingOut,
@@ -31,7 +47,7 @@ const Home = ({
   const [tasks, setTasks] = useState<Task[]>([])
   const [uniqueTags, setUniqueTags] = useState<string[]>(['today'])
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>({ today: true })
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
   const allTasksRef = useRef<AllTasksHandle>(null)
 
   const allTagsSelected = Object.values(tagFilters).every(Boolean)
@@ -85,6 +101,10 @@ const Home = ({
   useEffect(() => {
     fetchTasks()
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
+  }, [isDarkMode])
 
   const handleToggleTag = (tag: string) => {
     setTagFilters(prev => ({
