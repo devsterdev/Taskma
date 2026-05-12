@@ -8,6 +8,7 @@ type TodoCreateInput = {
   title: string
   description: string
   completed: boolean
+  dueDate?: Date
   userId: number
   tags: string[]
 }

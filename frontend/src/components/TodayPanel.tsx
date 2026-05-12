@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Check, CheckCircle2, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
+import { Calendar, Check, CheckCircle2, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
 import { apiCall } from '../utils/api'
 
 interface Task {
@@ -8,6 +8,7 @@ interface Task {
   description: string
   completed: boolean
   userId: number
+  dueDate?: string | null
   createdAt?: string
   updatedAt?: string
   tags?: { id: number; name: string }[]
@@ -34,7 +35,7 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
 }) => {
   const [expandedCompleted, setExpandedCompleted] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '' })
+  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '' })
   const [isCreating, setIsCreating] = useState(false)
 
   const panelClass = isDarkMode
@@ -46,6 +47,12 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
       ? 'border-zinc-700 bg-[#121212] text-zinc-100 placeholder-zinc-500 focus:border-zinc-400 focus:outline-none'
       : 'border-zinc-300 bg-white text-zinc-950 placeholder-zinc-400 focus:border-zinc-700 focus:outline-none'
   }`
+  const dateIconInputClass = `h-10 w-10 cursor-pointer rounded-md border text-transparent transition-colors [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 ${
+    isDarkMode
+      ? 'border-zinc-700 bg-[#121212] focus:border-zinc-400 focus:outline-none'
+      : 'border-zinc-300 bg-white focus:border-zinc-700 focus:outline-none'
+  }`
+  const dateIconClass = isDarkMode ? 'text-zinc-300' : 'text-zinc-700'
 
   const formatCompletedDate = (task: Task) => {
     const dateValue = task.updatedAt || task.createdAt
@@ -65,23 +72,68 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
     }).format(date)}`
   }
 
+  const getTodayDateInputValue = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+  }
+
+  const formatDueDate = (value?: string | null) => {
+    if (!value) {
+      return ''
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return ''
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(date)
+  }
+
+  const isTaskOverdue = (task: Task) => {
+    if (!task.dueDate || task.completed) {
+      return false
+    }
+
+    const dueDate = new Date(task.dueDate)
+    if (Number.isNaN(dueDate.getTime())) {
+      return false
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    dueDate.setHours(0, 0, 0, 0)
+
+    return dueDate < today
+  }
+
   const handleAddTodayTask = async () => {
     if (!newTask.title.trim() || isCreating) {
       return
     }
 
+    const dueDate = newTask.dueDate || getTodayDateInputValue()
     const temporaryTaskId = -Date.now()
     const optimisticTask: Task = {
       id: temporaryTaskId,
       title: newTask.title.trim(),
       description: newTask.description,
+      dueDate,
       completed: false,
       userId: 0,
       tags: [{ id: temporaryTaskId - 1, name: 'today' }]
     }
 
     onTaskCreateStart?.(optimisticTask)
-    setNewTask({ title: '', description: '' })
+    setNewTask({ title: '', description: '', dueDate: '' })
     setShowAddForm(false)
     setIsCreating(true)
 
@@ -91,6 +143,7 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
         body: JSON.stringify({
           title: optimisticTask.title,
           description: optimisticTask.description,
+          dueDate: optimisticTask.dueDate,
           tags: ['today']
         })
       })
@@ -119,7 +172,10 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
 
         <button
           type="button"
-          onClick={() => setShowAddForm(true)}
+          onClick={() => {
+            setNewTask(prev => ({ ...prev, dueDate: prev.dueDate || getTodayDateInputValue() }))
+            setShowAddForm(true)
+          }}
           className={`mb-4 flex items-center gap-4 text-sm transition-colors ${
             isDarkMode ? 'text-blue-200 hover:text-white' : 'text-zinc-700 hover:text-black'
           }`}
@@ -160,6 +216,21 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
                 rows={2}
                 className={`${inputClass} resize-none`}
               />
+              <div className="flex items-center gap-3">
+                <label className="flex shrink-0 items-center gap-2 text-sm" title="Choose due date">
+                  <span className="relative flex h-10 w-10 items-center justify-center">
+                    <Calendar size={17} className={`pointer-events-none absolute ${dateIconClass}`} />
+                    <input
+                      type="date"
+                      value={newTask.dueDate}
+                      onChange={event => setNewTask(prev => ({ ...prev, dueDate: event.target.value }))}
+                      className={dateIconInputClass}
+                      aria-label="Choose due date"
+                    />
+                  </span>
+                  <span className={mutedClass}>Due date</span>
+                </label>
+              </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -218,9 +289,18 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
                     aria-label="Mark task complete"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm leading-5">{task.title}</p>
+                    <p className={`text-sm leading-5 ${
+                      isTaskOverdue(task) ? isDarkMode ? 'text-red-300' : 'text-red-600' : ''
+                    }`}>{task.title}</p>
                     {task.description && (
                       <p className={`text-xs leading-4 ${mutedClass}`}>{task.description}</p>
+                    )}
+                    {task.dueDate && (
+                      <p className={`mt-1 text-xs ${
+                        isTaskOverdue(task) ? isDarkMode ? 'text-red-300' : 'text-red-600' : mutedClass
+                      }`}>
+                        Due: {formatDueDate(task.dueDate)}
+                      </p>
                     )}
                   </div>
                 </div>

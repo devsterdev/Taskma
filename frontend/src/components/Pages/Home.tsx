@@ -11,6 +11,7 @@ interface Task {
   description: string
   completed: boolean
   userId: number
+  dueDate?: string | null
   tags?: { id: number; name: string }[]
 }
 
@@ -19,35 +20,22 @@ interface CurrentUser {
   email: string
 }
 
-const THEME_STORAGE_KEY = 'taskma-theme'
-
-const getInitialTheme = () => {
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-
-  if (savedTheme === 'dark') {
-    return true
-  }
-
-  if (savedTheme === 'light') {
-    return false
-  }
-
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-}
-
 const Home = ({
   onLogout,
   isLoggingOut,
-  currentUser
+  currentUser,
+  isDarkMode,
+  onThemeToggle
 }: {
   onLogout: () => void | Promise<void>
   isLoggingOut?: boolean
   currentUser: CurrentUser | null
+  isDarkMode: boolean
+  onThemeToggle: (isDark: boolean) => void
 }) => {
   const [tasks, setTasks] = useState<Task[]>([])
   const [uniqueTags, setUniqueTags] = useState<string[]>(['today'])
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>({ today: true })
-  const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
   const allTasksRef = useRef<AllTasksHandle>(null)
 
   const allTagsSelected = Object.values(tagFilters).every(Boolean)
@@ -101,10 +89,6 @@ const Home = ({
   useEffect(() => {
     fetchTasks()
   }, [])
-
-  useEffect(() => {
-    localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
-  }, [isDarkMode])
 
   const handleToggleTag = (tag: string) => {
     setTagFilters(prev => ({
@@ -226,7 +210,7 @@ const Home = ({
       {/* NAVBAR */}
       <Navbar
         isDarkMode={isDarkMode}
-        onThemeToggle={setIsDarkMode}
+        onThemeToggle={onThemeToggle}
         onLogout={onLogout}
         isLoggingOut={isLoggingOut}
         currentUser={currentUser}

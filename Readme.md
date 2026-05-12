@@ -195,5 +195,3 @@ npm run dev
 2. Access token is sent in the `Authorization: Bearer <token>` header on every request
 3. When the access token expires, the client uses the refresh token to get a new one
 4. Logout clears the refresh token from the database
-
----

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, User, Eye, EyeOff, Moon, Sun } from 'lucide-react'
 import { apiCall } from '../../utils/api'
 
 interface CurrentUser {
@@ -9,10 +9,14 @@ interface CurrentUser {
 
 const SignupPage = ({
   setCurrentPage,
-  setCurrentUser
+  setCurrentUser,
+  isDarkMode,
+  onThemeToggle
 }: {
   setCurrentPage: (page: 'home' | 'auth') => void
   setCurrentUser: (user: CurrentUser | null) => void
+  isDarkMode: boolean
+  onThemeToggle: (isDark: boolean) => void
 }) => {
   const [isSignup, setIsSignup] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -27,6 +31,29 @@ const SignupPage = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const pageClass = isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
+  const mutedClass = isDarkMode ? 'text-zinc-400' : 'text-gray-600'
+  const panelClass = isDarkMode ? 'border-zinc-800 bg-[#121212]' : 'border-black bg-white'
+  const borderClass = isDarkMode ? 'border-zinc-700' : 'border-black'
+  const inputClass = (hasError?: boolean, paddingClass = 'pl-10 pr-4') =>
+    `w-full ${paddingClass} py-2 border-2 ${
+      hasError ? 'border-red-500' : borderClass
+    } rounded-lg focus:outline-none ${
+      isDarkMode
+        ? 'bg-[#181818] text-white placeholder-zinc-500 focus:border-zinc-400'
+        : 'bg-white text-black placeholder-gray-500 focus:border-black'
+    }`
+  const iconClass = isDarkMode ? 'text-zinc-300' : 'text-black'
+  const iconButtonClass = isDarkMode
+    ? 'border-zinc-800 bg-[#181818] text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white'
+    : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-950'
+  const submitClass = isDarkMode
+    ? 'bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-500 disabled:text-zinc-900'
+    : 'bg-black text-white hover:bg-gray-900 disabled:bg-gray-700'
+  const linkClass = isDarkMode
+    ? 'font-bold text-white hover:text-zinc-300 disabled:text-zinc-600 disabled:cursor-not-allowed underline'
+    : 'font-bold text-black hover:text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed underline'
 
 const genderOptions = [
   'Male',
@@ -200,25 +227,35 @@ const genderOptions = [
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className={`min-h-screen ${pageClass} flex items-center justify-center p-4`}>
+      <button
+        type="button"
+        onClick={() => onThemeToggle(!isDarkMode)}
+        className={`absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${iconButtonClass}`}
+        title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-black mb-2">Taskma</h1>
-          <p className="text-gray-600">{isSignup ? 'Create your account' : 'Welcome back'}</p>
+          <h1 className="text-4xl font-bold mb-2">Taskma</h1>
+          <p className={mutedClass}>{isSignup ? 'Create your account' : 'Welcome back'}</p>
         </div>
 
         {/* Form Container */}
-        <div className="border-2 border-black rounded-lg p-8">
+        <div className={`border-2 rounded-lg p-8 ${panelClass}`}>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Field - Only for Signup */}
             {isSignup && (
               <div>
-                <label htmlFor="name" className="block text-black font-medium mb-2">
+                <label htmlFor="name" className="block font-medium mb-2">
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 text-black" size={20} />
+                  <User className={`absolute left-3 top-3 ${iconClass}`} size={20} />
                   <input
                     type="text"
                     id="name"
@@ -226,9 +263,7 @@ const genderOptions = [
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Enter your full name"
-                    className={`w-full pl-10 pr-4 py-2 border-2 ${
-                      errors.name ? 'border-red-500' : 'border-black'
-                    } rounded-lg focus:outline-none focus:border-black bg-white text-black placeholder-gray-500`}
+                    className={inputClass(Boolean(errors.name))}
                   />
                 </div>
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -238,16 +273,14 @@ const genderOptions = [
             {/* Gender Field - Only for Signup */}
             {isSignup && (
               <div>
-                <label htmlFor="gender" className="block text-black font-medium mb-2">
+                <label htmlFor="gender" className="block font-medium mb-2">
                   Gender <span className='text-[10px]'>*optional</span>
                 </label>
                 <div className="relative">
                   <select
                     id="gender"
                     name="gender"
-                    className={`w-full pl-4 pr-4 py-2 border-2 ${
-                      errors.gender ? 'border-red-500' : 'border-black'
-                    } rounded-lg focus:outline-none focus:border-black bg-white text-black`}
+                    className={inputClass(Boolean(errors.gender), 'pl-4 pr-4')}
                   >
                     <option value="">Select your gender</option>
                     {genderOptions.map((option) => (
@@ -262,11 +295,11 @@ const genderOptions = [
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-black font-medium mb-2">
+              <label htmlFor="email" className="block font-medium mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 text-black" size={20} />
+                <Mail className={`absolute left-3 top-3 ${iconClass}`} size={20} />
                 <input
                   type="email"
                   id="email"
@@ -278,9 +311,7 @@ const genderOptions = [
                   autoComplete="email"
                   pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                   placeholder="Enter your email"
-                  className={`w-full pl-10 pr-4 py-2 border-2 ${
-                    errors.email ? 'border-red-500' : 'border-black'
-                  } rounded-lg focus:outline-none focus:border-black bg-white text-black placeholder-gray-500`}
+                  className={inputClass(Boolean(errors.email))}
                 />
               </div>
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
@@ -288,11 +319,11 @@ const genderOptions = [
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-black font-medium mb-2">
+              <label htmlFor="password" className="block font-medium mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 text-black" size={20} />
+                <Lock className={`absolute left-3 top-3 ${iconClass}`} size={20} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
@@ -300,14 +331,12 @@ const genderOptions = [
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className={`w-full pl-10 pr-10 py-2 border-2 ${
-                    errors.password ? 'border-red-500' : 'border-black'
-                  } rounded-lg focus:outline-none focus:border-black bg-white text-black placeholder-gray-500`}
+                  className={inputClass(Boolean(errors.password), 'pl-10 pr-10')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-black hover:text-gray-700"
+                  className={`absolute right-3 top-3 ${iconClass} hover:opacity-75`}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -318,11 +347,11 @@ const genderOptions = [
             {/* Confirm Password Field - Only for Signup */}
             {isSignup && (
               <div>
-                <label htmlFor="confirmPassword" className="block text-black font-medium mb-2">
+                <label htmlFor="confirmPassword" className="block font-medium mb-2">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 text-black" size={20} />
+                  <Lock className={`absolute left-3 top-3 ${iconClass}`} size={20} />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     id="confirmPassword"
@@ -330,14 +359,12 @@ const genderOptions = [
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm your password"
-                    className={`w-full pl-10 pr-10 py-2 border-2 ${
-                      errors.confirmPassword ? 'border-red-500' : 'border-black'
-                    } rounded-lg focus:outline-none focus:border-black bg-white text-black placeholder-gray-500`}
+                    className={inputClass(Boolean(errors.confirmPassword), 'pl-10 pr-10')}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-black hover:text-gray-700"
+                    className={`absolute right-3 top-3 ${iconClass} hover:opacity-75`}
                   >
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -354,15 +381,15 @@ const genderOptions = [
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg transition-colors"
+              className={`w-full disabled:cursor-not-allowed font-bold py-2 px-4 rounded-lg transition-colors ${submitClass}`}
             >
               {isSubmitting ? (isSignup ? 'Signing up...' : 'Signing in...') : (isSignup ? 'Sign Up' : 'Sign In')}
             </button>
           </form>
 
           {/* Toggle Between Signup/Signin */}
-          <div className="mt-6 text-center border-t-2 border-black pt-6">
-            <p className="text-black">
+          <div className={`mt-6 text-center border-t-2 pt-6 ${borderClass}`}>
+            <p>
               {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
                 type="button"
@@ -372,7 +399,7 @@ const genderOptions = [
                   setFormData({ name: '', email: '', password: '', confirmPassword: ''})
                   setErrors({})
                 }}
-                className="font-bold text-black hover:text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed underline"
+                className={linkClass}
               >
                 {isSignup ? 'Sign In' : 'Sign Up'}
               </button>
@@ -381,7 +408,7 @@ const genderOptions = [
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-gray-600 text-sm">
+        <div className={`text-center mt-8 text-sm ${mutedClass}`}>
           <p>© 2026 Taskma. All rights reserved.</p>
         </div>
       </div>

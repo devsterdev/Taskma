@@ -3,7 +3,7 @@ import { findUserByUserId } from "../db/user.db.js"
 import { createTodo, findTodoAndUpdate, getTodos, deleteTodoById } from "../db/todo.db.js"
 
 const addTodo = async(req: Request, res: Response) => {
-  const { title, description, tags } = req.body
+  const { title, description, tags, dueDate } = req.body
   if (!req.user?.id) {
     return res.status(401).json({
       message: "Unauthorized request"
@@ -24,6 +24,7 @@ const addTodo = async(req: Request, res: Response) => {
     title,
     description,
     completed: false,
+    dueDate: new Date(dueDate),
     user: {
       connect: { id: existedUser.id }
     },
@@ -63,14 +64,15 @@ const getTodo = async(req: Request, res: Response) => {
     })
 }
 
-const updateTodo = async (req: Request, res: Response) => {
+const updateTodo = async(req: Request, res: Response) => {
   const id = Number(req.params.id)
 
   const {
     title,
     description,
     completed,
-    tags
+    tags,
+    dueDate
   } = req.body
 
   if (isNaN(id)) {
@@ -84,7 +86,7 @@ const updateTodo = async (req: Request, res: Response) => {
       title,
       description,
       completed,
-
+      dueDate,
       ...(tags && {
         tags: {
           set: [],
@@ -120,9 +122,18 @@ const deleteTodo = async(req: Request, res: Response) => {
   }
   try{
     const todo = await deleteTodoById(id)
+    if (!todo) {
+      return res.status(404).json({
+        message: "Todo not found"
+      })
+    }
+
     return res
       .status(200)
-      // .json(todo)
+      .json({
+        message: "Todo deleted successfully",
+        todo
+      })
   }
   catch(err: any){
     return res

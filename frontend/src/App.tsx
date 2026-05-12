@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Home from './components/Pages/Home'
 import SignupPage from './components/Pages/SignupPage'
 import { apiCall } from './utils/api'
+import { getInitialTheme, THEME_STORAGE_KEY } from './utils/theme'
 
 interface CurrentUser {
   name: string
@@ -13,6 +14,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
 
   useEffect(() => {
     const validateSession = async () => {
@@ -44,6 +46,10 @@ function App() {
     validateSession()
   }, [])
 
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
+  }, [isDarkMode])
+
   const handleLogout = async () => {
     if (isLoggingOut) {
       return
@@ -71,9 +77,20 @@ function App() {
   return (
     <div>
       {currentPage === 'auth' ? (
-        <SignupPage setCurrentPage={setCurrentPage} setCurrentUser={setCurrentUser} />
+        <SignupPage
+          setCurrentPage={setCurrentPage}
+          setCurrentUser={setCurrentUser}
+          isDarkMode={isDarkMode}
+          onThemeToggle={setIsDarkMode}
+        />
       ) : (
-        <Home onLogout={handleLogout} isLoggingOut={isLoggingOut} currentUser={currentUser} />
+        <Home
+          onLogout={handleLogout}
+          isLoggingOut={isLoggingOut}
+          currentUser={currentUser}
+          isDarkMode={isDarkMode}
+          onThemeToggle={setIsDarkMode}
+        />
       )}
     </div>
   )
