@@ -86,7 +86,7 @@ const updateTodo = async(req: Request, res: Response) => {
       title,
       description,
       completed,
-      dueDate,
+       dueDate: dueDate ? new Date(dueDate) : undefined,
       ...(tags && {
         tags: {
           set: [],

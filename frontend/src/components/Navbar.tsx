@@ -50,9 +50,6 @@ const Navbar: React.FC<NavbarProps> = ({
   const navClass = isDarkMode
     ? 'border-zinc-950 bg-[#121212] text-zinc-100'
     : 'border-zinc-200 bg-white text-zinc-950'
-  const logoClass = isDarkMode
-    ? 'bg-zinc-100 text-zinc-950'
-    : 'bg-zinc-950 text-white'
   const iconButtonClass = isDarkMode
     ? 'border-zinc-800 bg-[#181818] text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white'
     : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-950'
@@ -70,11 +67,6 @@ const Navbar: React.FC<NavbarProps> = ({
       className={`flex h-16 items-center justify-between border-b px-5 ${navClass}`}
     >
       <div className="flex items-center gap-3">
-        <div
-          className={`flex h-9 w-9 items-center justify-center rounded-lg text-base font-semibold ${logoClass}`}
-        >
-          T
-        </div>
         <h1 className="text-lg font-semibold">Taskma</h1>
       </div>
 
