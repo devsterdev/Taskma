@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Mail, Lock, User, Eye, EyeOff, Moon, Sun } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, Mail, Lock, User, Eye, EyeOff, Moon, Sun } from 'lucide-react'
 import { apiCall } from '../../utils/api'
 
 interface CurrentUser {
@@ -27,10 +27,13 @@ const SignupPage = ({
     email: '',
     password: '',
     confirmPassword: '',
+    gender: '',
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGenderOpen, setIsGenderOpen] = useState(false)
+  const genderDropdownRef = useRef<HTMLDivElement>(null)
 
   const pageClass = isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
   const mutedClass = isDarkMode ? 'text-zinc-400' : 'text-gray-600'
@@ -44,6 +47,18 @@ const SignupPage = ({
         ? 'bg-[#181818] text-white placeholder-zinc-500 focus:border-zinc-400'
         : 'bg-white text-black placeholder-gray-500 focus:border-black'
     }`
+  const genderSelectClass = `flex w-full items-center justify-between rounded-lg border-2 px-4 py-2 text-left focus:outline-none ${
+    errors.gender ? 'border-red-500' : borderClass
+  } ${
+    isDarkMode
+      ? 'bg-[#181818] text-white focus:border-zinc-400'
+      : 'bg-white text-black focus:border-black'
+  }`
+  const genderMenuClass = `absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-lg border-2 py-1 shadow-lg ${
+    isDarkMode
+      ? 'border-zinc-700 bg-[#181818] text-white'
+      : 'border-black bg-white text-black'
+  }`
   const iconClass = isDarkMode ? 'text-zinc-300' : 'text-black'
   const iconButtonClass = isDarkMode
     ? 'border-zinc-800 bg-[#181818] text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white'
@@ -122,6 +137,34 @@ const genderOptions = [
         [name]: ''
       }))
     }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (genderDropdownRef.current && !genderDropdownRef.current.contains(event.target as Node)) {
+        setIsGenderOpen(false)
+      }
+    }
+
+    if (isGenderOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isGenderOpen])
+
+  const handleGenderSelect = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      gender: value
+    }))
+    setErrors(prev => ({
+      ...prev,
+      gender: ''
+    }))
+    setIsGenderOpen(false)
   }
 
   const validateForm = () => {
@@ -276,19 +319,55 @@ const genderOptions = [
                 <label htmlFor="gender" className="block font-medium mb-2">
                   Gender <span className='text-[10px]'>*optional</span>
                 </label>
-                <div className="relative">
-                  <select
+                <div ref={genderDropdownRef} className="relative">
+                  <button
                     id="gender"
-                    name="gender"
-                    className={inputClass(Boolean(errors.gender), 'pl-4 pr-4')}
+                    type="button"
+                    onClick={() => setIsGenderOpen(prev => !prev)}
+                    className={genderSelectClass}
+                    aria-haspopup="listbox"
+                    aria-expanded={isGenderOpen}
                   >
-                    <option value="">Select your gender</option>
-                    {genderOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    <span className={formData.gender ? '' : mutedClass}>
+                      {formData.gender || 'Select your gender'}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      className={`shrink-0 transition-transform ${isGenderOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {isGenderOpen && (
+                    <div className={genderMenuClass} role="listbox" aria-labelledby="gender">
+                      <button
+                        type="button"
+                        onClick={() => handleGenderSelect('')}
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+                          isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'
+                        }`}
+                        role="option"
+                        aria-selected={formData.gender === ''}
+                      >
+                        Select your gender
+                        {formData.gender === '' && <Check size={15} />}
+                      </button>
+                      {genderOptions.map(option => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => handleGenderSelect(option)}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+                            isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'
+                          }`}
+                          role="option"
+                          aria-selected={formData.gender === option}
+                        >
+                          {option}
+                          {formData.gender === option && <Check size={15} />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -396,7 +475,8 @@ const genderOptions = [
                 disabled={isSubmitting}
                 onClick={() => {
                   setIsSignup(!isSignup)
-                  setFormData({ name: '', email: '', password: '', confirmPassword: ''})
+                  setFormData({ name: '', email: '', password: '', confirmPassword: '', gender: '' })
+                  setIsGenderOpen(false)
                   setErrors({})
                 }}
                 className={linkClass}

@@ -1,9 +1,12 @@
-import type { findUserByUserId } from "../db/user.db.ts";
-
 declare global {
   namespace Express {
-    interface Request {
-      user?: Awaited<ReturnType<typeof findUserByUserId>>;
+    interface User {
+      id?: number;
+      email?: string;
+      name?: string;
+      createdAt?: Date;
+      provider?: string;
+      providerId?: string;
     }
   }
 }

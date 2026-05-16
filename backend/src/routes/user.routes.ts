@@ -3,6 +3,7 @@ import { logOutUser, registerUser, signInUser, getUserProfile } from "../control
 import { verifyJWT } from "../middleware/auth.middleware.js";
 
 
+
 const router = Router()
 
 router.route("/register").post(registerUser)

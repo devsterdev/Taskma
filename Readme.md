@@ -1,4 +1,4 @@
-# Taskma, Built while learning Prisma
+# Taskma
 
 A full-stack Todo application built as a hands on project for learning [Prisma ORM](https://www.prisma.io/). It supports user authentication, tag based todo organization, and is deployed across Vercel and Render.
 

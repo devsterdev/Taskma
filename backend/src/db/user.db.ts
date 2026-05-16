@@ -5,8 +5,9 @@ import { PrismaClient } from '@prisma/client'
 type CreateUserInput = {
   email: string;
   name: string;
-  password: string;
-  refreshToken: string
+  password?: string | null;
+  googleId?: string | null;
+  refreshToken?: string;
 };
 
 const adapter = new PrismaPg({

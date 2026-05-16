@@ -1,19 +1,8 @@
 import 'dotenv/config'
 import { createUser, findUserByEmail, updateUser } from "../db/user.db.js"
+import { generateAccessAndRefreshTokens } from '../utils/token.utils.js';
 import type { CookieOptions, Request, Response } from "express";
 import bcrypt from "bcrypt";
-import jwt from 'jsonwebtoken'
-
-const getJwtSecrets = () => {
-  const accessTokenSecret = process.env.JWT_SECRET_KEY;
-  const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET_KEY || accessTokenSecret;
-
-  if (!accessTokenSecret || !refreshTokenSecret) {
-    throw new Error("JWT secrets are not defined in environment variables");
-  }
-
-  return { accessTokenSecret, refreshTokenSecret };
-}
 
 const getCookieOptions = (req: Request): CookieOptions => {
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -28,25 +17,6 @@ const getCookieOptions = (req: Request): CookieOptions => {
     sameSite: isHttpsRequest ? "none" : "lax",
   };
 };
-
-const generateAccessAndRefreshTokens = (userId: number) => {
-  const { accessTokenSecret, refreshTokenSecret } = getJwtSecrets();
-
-  const accessToken = jwt.sign(
-    { userId },
-    accessTokenSecret,
-    { expiresIn: "15d" }
-  );
-
-  const refreshToken = jwt.sign(
-    { userId },
-    refreshTokenSecret,
-    { expiresIn: "300d" }
-  );
-
-  return { accessToken, refreshToken };
-}
-
 
 const registerUser = async (req: Request, res: Response) => {
   const {email, name, password} = req.body
@@ -119,7 +89,7 @@ const signInUser = async(req: Request, res: Response) => {
   const {email, password} = req.body
 
   if (
-    [email, password].some((field) => field?.trim() === "")
+    [email].some((field) => field?.trim() === "")
   ) {
     return res.json({
       message: "all fields require"
@@ -131,6 +101,12 @@ const signInUser = async(req: Request, res: Response) => {
       return res.json({
         message: "User don't exist"
       })
+    }
+
+    if (!existedUser.password) {
+      return res.status(400).json({
+        message: "Please sign in with Google or set a password"
+      });
     }
 
     const isMatch = await bcrypt.compare(password, existedUser.password);
