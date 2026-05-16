@@ -2,6 +2,7 @@ import express from "express";
 
 import passport from "passport";
 import type { AuthenticateOptions } from "passport";
+import { isGoogleOAuthConfigured } from "../oauth/google.strategy.js";
 
 import {
   googleCallback,
@@ -24,6 +25,16 @@ const getGoogleCallbackUrl = (req: express.Request) => {
   return envCallbackUrl || `${requestOrigin}/auth/google/callback`;
 };
 
+const requireGoogleOAuthConfig: express.RequestHandler = (req, res, next) => {
+  if (!isGoogleOAuthConfigured) {
+    return res.status(503).json({
+      message: "Google OAuth is not configured",
+    });
+  }
+
+  return next();
+};
+
 type GoogleAuthenticateOptions = AuthenticateOptions & {
   callbackURL: string;
   prompt?: string;
@@ -32,6 +43,7 @@ type GoogleAuthenticateOptions = AuthenticateOptions & {
 
 router.get(
   "/google",
+  requireGoogleOAuthConfig,
   (req, res, next) => {
     const options: GoogleAuthenticateOptions = {
       scope: ["profile", "email"],
@@ -46,6 +58,7 @@ router.get(
 
 router.get(
   "/google/callback",
+  requireGoogleOAuthConfig,
   (req, res, next) => {
     const options: GoogleAuthenticateOptions = {
       session: false,
