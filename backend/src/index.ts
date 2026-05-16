@@ -12,7 +12,7 @@ app.use(cookieParser())
 app.use(passport.initialize());
 
 app.use(cors({
-  origin: true,
+   origin: process.env.FRONTEND_URL,
   credentials: true
 }))
 app.use(express.json({ limit: "16kb" }))
