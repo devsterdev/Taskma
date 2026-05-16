@@ -3,7 +3,7 @@ import { CheckCircle2 } from 'lucide-react'
 import Home from './components/Pages/Home'
 import { apiCall } from './utils/api'
 import { getInitialTheme, THEME_STORAGE_KEY } from './utils/theme'
-import OAuth2 from './components/Pages/OAuth2'
+import SignupPage from './components/Pages/SignupPage'
 
 interface CurrentUser {
   name: string
@@ -172,13 +172,9 @@ function App() {
   return (
     <div>
       {currentPage === 'auth' ? (
-        // <SignupPage
-        //   setCurrentPage={setCurrentPage}
-        //   setCurrentUser={setCurrentUser}
-        //   isDarkMode={isDarkMode}
-        //   onThemeToggle={setIsDarkMode}
-        // />
-        <OAuth2
+        <SignupPage
+          setCurrentPage={setCurrentPage}
+          setCurrentUser={setCurrentUser}
           isDarkMode={isDarkMode}
           onThemeToggle={setIsDarkMode}
         />
