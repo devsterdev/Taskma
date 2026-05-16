@@ -1,4 +1,5 @@
 import { CheckCircle2, Moon, Sun } from 'lucide-react'
+import { API_BASE_URL } from '../../utils/api'
 
 const OAuth2 = ({
   isDarkMode,
@@ -21,7 +22,7 @@ const OAuth2 = ({
 
     const googleLogin = () => {
       window.location.href =
-      "http://localhost:3000/auth/google";
+      `${API_BASE_URL}/auth/google`;
     };
   return (
     <main className={`flex min-h-screen items-center justify-center px-4 ${pageClass}`}>

@@ -1,6 +1,7 @@
 import express from "express";
 
 import passport from "passport";
+import type { AuthenticateOptions } from "passport";
 
 import {
   googleCallback,
@@ -8,23 +9,59 @@ import {
 from "../controller/auth.controller.js";
 
 const router = express.Router();
+const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+
+const getGoogleCallbackUrl = (req: express.Request) => {
+  const envCallbackUrl = process.env.GOOGLE_CALLBACK_URL;
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const requestOrigin = `${protocol || req.protocol}://${req.get("host")}`;
+
+  if (req.hostname === "localhost" || req.hostname === "127.0.0.1") {
+    return `${requestOrigin}/auth/google/callback`;
+  }
+
+  return envCallbackUrl || `${requestOrigin}/auth/google/callback`;
+};
+
+type GoogleAuthenticateOptions = AuthenticateOptions & {
+  callbackURL: string;
+  prompt?: string;
+  scope?: string[];
+};
 
 router.get(
   "/google",
+  (req, res, next) => {
+    const options: GoogleAuthenticateOptions = {
+      scope: ["profile", "email"],
+      session: false,
+      callbackURL: getGoogleCallbackUrl(req),
+      prompt: "select_account",
+    };
 
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    session: false,
-  })
+    passport.authenticate("google", options)(req, res, next);
+  }
 );
 
 router.get(
   "/google/callback",
+  (req, res, next) => {
+    const options: GoogleAuthenticateOptions = {
+      session: false,
+      callbackURL: getGoogleCallbackUrl(req),
+    };
 
-  passport.authenticate("google", {
-    session: false,
-  }),
+    passport.authenticate("google", options, (error: Error | null, user: Express.User | false, info: unknown) => {
+      if (error || !user) {
+        console.error("Google authentication failed:", error || info);
+        return res.redirect(`${frontendUrl}/?oauth=failed`);
+      }
 
+      req.user = user;
+      return next();
+    })(req, res, next);
+  },
   googleCallback
 );
 

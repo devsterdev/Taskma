@@ -28,6 +28,15 @@ export const createUser = (data: CreateUserInput) => {
   })
 }
 
+export const updateUserGoogleId = (id: number, googleId: string) => {
+  return client.user.update({
+    where: {id},
+    data: {
+      googleId
+    }
+  })
+}
+
 export const findUserByUserId = (id: number) => {
   return client.user.findUnique({
     where: {id},

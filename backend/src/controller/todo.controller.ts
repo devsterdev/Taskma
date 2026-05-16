@@ -2,6 +2,20 @@ import type { Request, Response } from "express"
 import { findUserByUserId } from "../db/user.db.js"
 import { createTodo, findTodoAndUpdate, getTodos, deleteTodoById } from "../db/todo.db.js"
 
+const parseDueDate = (dueDate: unknown) => {
+  if (dueDate === undefined || dueDate === null || dueDate === "") {
+    return null;
+  }
+
+  const parsedDate = new Date(String(dueDate));
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return undefined;
+  }
+
+  return parsedDate;
+}
+
 const addTodo = async(req: Request, res: Response) => {
   const { title, description, tags, dueDate } = req.body
   if (!req.user?.id) {
@@ -17,19 +31,29 @@ const addTodo = async(req: Request, res: Response) => {
       .status(400)
       .json({
         message: "user don't exist"
+      })
+  }
+
+  const parsedDueDate = parseDueDate(dueDate);
+
+  if (parsedDueDate === undefined) {
+    return res.status(400).json({
+      message: "Invalid due date"
     })
   }
+
+  const normalizedTags = Array.isArray(tags) ? tags : [];
 
   const todo = await createTodo({
     title,
     description,
     completed: false,
-    dueDate: new Date(dueDate),
+    dueDate: parsedDueDate,
     user: {
       connect: { id: existedUser.id }
     },
     tags: {
-    connectOrCreate: tags.map((tag: string) => ({
+    connectOrCreate: normalizedTags.map((tag: string) => ({
       where: {
         name: tag
       },
@@ -82,11 +106,19 @@ const updateTodo = async(req: Request, res: Response) => {
   }
 
   try {
+    const parsedDueDate = parseDueDate(dueDate);
+
+    if (parsedDueDate === undefined && dueDate !== undefined) {
+      return res.status(400).json({
+        message: "Invalid due date"
+      })
+    }
+
     const todo = await findTodoAndUpdate(id, {
       title,
       description,
       completed,
-       dueDate: dueDate ? new Date(dueDate) : undefined,
+      ...(dueDate !== undefined && { dueDate: parsedDueDate }),
       ...(tags && {
         tags: {
           set: [],

@@ -1,12 +1,21 @@
-import { createUser, findUserByEmail, updateUser } from "../db/user.db.js"
+import { createUser, findUserByEmail, updateUser, updateUserGoogleId } from "../db/user.db.js"
 import { generateAccessToken, generateRefreshToken } from "../utils/token.utils.js";
 
-export const oauthLogin = async (profile: any) => {
+type GoogleProfile = {
+  email?: string;
+  name?: string;
+  providerId?: string;
+  emails?: Array<{ value?: string }>;
+  displayName?: string;
+  id?: string | number;
+};
+
+export const oauthLogin = async (profile: GoogleProfile) => {
   const email = profile.email ?? profile.emails?.[0]?.value;
   const name = profile.name ?? profile.displayName;
-  const googleId = profile.providerId ?? profile.id;
+  const googleId = String(profile.providerId ?? profile.id ?? "");
 
-  if (!email || !name) {
+  if (!email || !name || !googleId) {
     throw new Error("Google profile is missing required user details");
   }
 
@@ -20,6 +29,8 @@ export const oauthLogin = async (profile: any) => {
       password: null,
       refreshToken: "",
     })
+  } else if (!user.googleId) {
+    user = await updateUserGoogleId(user.id, googleId);
   }
 
   const accessToken = generateAccessToken(user.id);
