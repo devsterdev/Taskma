@@ -1,32 +1,43 @@
-# Taskma
+```
+████████╗ █████╗ ███████╗██╗  ██╗███╗   ███╗ █████╗
+╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝████╗ ████║██╔══██╗
+   ██║   ███████║███████╗█████╔╝ ██╔████╔██║███████║
+   ██║   ██╔══██║╚════██║██╔═██╗ ██║╚██╔╝██║██╔══██║
+   ██║   ██║  ██║███████║██║  ██╗██║ ╚═╝ ██║██║  ██║
+   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
+```
 
-A full-stack Todo application built as a hands on project for learning [Prisma ORM](https://www.prisma.io/). It supports user authentication, tag based todo organization, and is deployed across Vercel and Render.
+**A full-stack task management app with tag-based organization, JWT sessions, and Google OAuth 2.0.**
 
----
-
-## What I Learned
-
-- Setting up **Prisma** with PostgreSQL from scratch
-- Writing and migrating a **Prisma schema** with relations (one-to-many, many-to-many)
-- Using **Prisma Client** for type-safe database queries
-- Structuring a **REST API** with Express and TypeScript
-- Implementing **JWT authentication** with access & refresh tokens
+> **Live:** [taskma-blond.vercel.app](https://taskma-blond.vercel.app)
 
 ---
 
 ## Features
 
-- **Auth** — Register, login, logout with JWT access & refresh tokens
-- **Todos** — Create, read, update, delete todos
-- **Tags** — Attach tags to todos for organization
-- **User-scoped** — Each user only sees their own todos
-- **Timestamps** — Auto-managed `createdAt` and `updatedAt` fields
+- **Auth** — Email/password registration and login, or one-click Google OAuth 2.0
+- **JWT sessions** — Signed access tokens with refresh token rotation
+- **Todos** — Create, read, update, delete tasks with optional descriptions and due dates
+- **Tags** — Attach tags to todos and filter by them from the sidebar
+- **User-scoped data** — Each user only sees their own todos
+- **Delete confirmation** — Dialog prompt before removing a task
+
+---
+
+## Tech Stack
+
+| Layer      | Technology                                      |
+|------------|-------------------------------------------------|
+| Frontend   | React, TypeScript, Vite, Tailwind CSS           |
+| Backend    | Node.js, Express, TypeScript                    |
+| ORM        | Prisma                                          |
+| Database   | PostgreSQL                                      |
+| Auth       | JWT, Passport.js, Google OAuth 2.0              |
+| Deployment | Vercel (frontend), Render (backend)             |
 
 ---
 
 ## Database Schema
-
-Three models with Prisma-managed relations:
 
 ```
 User ──< Todo >──< Tag
@@ -38,24 +49,26 @@ User ──< Todo >──< Tag
 
 ```prisma
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
   name         String
-  password     String
-  createdAt    DateTime @default(now())
-  refreshToken String
+  password     String?
+  googleId     String?   @unique
+  createdAt    DateTime  @default(now())
+  refreshToken String?
   todos        Todo[]
 }
 
 model Todo {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   title       String
   description String?
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  completed   Boolean   @default(false)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   userId      Int
-  user        User     @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   tags        Tag[]
 }
 
@@ -66,18 +79,7 @@ model Tag {
 }
 ```
 
----
-
-## Tech Stack
-
-| Layer      | Technology                          |
-|------------|-------------------------------------|
-| Frontend   | React, TypeScript, Vite             |
-| Backend    | Node.js, Express, TypeScript        |
-| ORM        | Prisma                              |
-| Database   | PostgreSQL                          |
-| Auth       | JWT (Access token + Refresh token)  |
-| Deployment | Vercel (frontend), Render (backend) |
+`password` and `refreshToken` are optional to support users who sign up via Google without setting a password.
 
 ---
 
@@ -91,18 +93,26 @@ model Tag {
 │   │   └── schema.prisma
 │   └── src/
 │       ├── controller/
+│       │   ├── auth.controller.ts       # Google OAuth callback handler
 │       │   ├── todo.controller.ts       # Todo CRUD logic
-│       │   └── user.controller.ts       # Auth & user logic
+│       │   └── user.controller.ts       # Register, login, refresh, logout
 │       ├── db/
 │       │   ├── todo.db.ts               # Prisma queries for todos
 │       │   └── user.db.ts               # Prisma queries for users
 │       ├── middleware/
 │       │   └── auth.middleware.ts       # JWT verification
+│       ├── oauth/
+│       │   └── google.strategy.ts       # Passport Google OAuth 2.0 strategy
 │       ├── routes/
+│       │   ├── auth.routes.ts           # Google OAuth routes
 │       │   ├── todo.routes.ts
 │       │   └── user.routes.ts
+│       ├── services/
+│       │   └── auth.service.ts          # Auth business logic
 │       ├── types/
 │       │   └── express.d.ts             # Extended Express types
+│       ├── utils/
+│       │   └── token.utils.ts           # JWT sign / verify helpers
 │       └── index.ts                     # App entry point
 │
 └── frontend/
@@ -110,15 +120,17 @@ model Tag {
     └── src/
         ├── components/
         │   ├── Pages/
-        │   │   ├── Home.tsx             # Main dashboard page
-        │   │   └── SignupPage.tsx        # Auth page
+        │   │   ├── Home.tsx             # Main dashboard
+        │   │   └── SignupPage.tsx        # Auth page (email + Google)
         │   ├── AllTasks.tsx             # All todos view
         │   ├── CompletedTasks.tsx       # Completed todos view
+        │   ├── DeleteTaskDialog.tsx     # Delete confirmation dialog
         │   ├── Navbar.tsx               # Top navigation
         │   ├── TagSidebar.tsx           # Tag-based filtering sidebar
         │   └── TodayPanel.tsx           # Today's todos panel
         ├── utils/
-        │   └── api.ts                   # API calls
+        │   ├── api.ts                   # API calls
+        │   └── theme.ts                 # Theme utilities
         ├── App.tsx
         ├── main.tsx
         └── index.css
@@ -132,7 +144,7 @@ model Tag {
 
 - Node.js v18+
 - PostgreSQL database
-- npm or yarn
+- A Google OAuth 2.0 client ID and secret ([Google Cloud Console](https://console.cloud.google.com/))
 
 ### 1. Clone the repo
 
@@ -151,12 +163,20 @@ npm install
 Create a `.env` file (see `.env.example`):
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/todos"
-ACCESS_TOKEN_SECRET="your_access_secret"
-REFRESH_TOKEN_SECRET="your_refresh_secret"
+DATABASE_URL=
+
+JWT_SECRET_KEY=
+
+CORS_ORIGIN=*
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=
+
+FRONTEND_URL=
 ```
 
-Run Prisma migrations and start the server:
+Run migrations and start the server:
 
 ```bash
 npx prisma migrate dev
@@ -175,23 +195,34 @@ npm run dev
 
 ## API Overview
 
-| Method | Endpoint         | Description            | Auth Required |
-|--------|------------------|------------------------|---------------|
-| POST   | `/auth/register` | Register a new user    | No            |
-| POST   | `/auth/login`    | Login and get tokens   | No            |
-| POST   | `/auth/refresh`  | Refresh access token   | No            |
-| POST   | `/auth/logout`   | Logout user            | Yes           |
-| GET    | `/todos`         | Get all todos for user | Yes           |
-| POST   | `/todos`         | Create a new todo      | Yes           |
-| PATCH  | `/todos/:id`     | Update a todo          | Yes           |
-| DELETE | `/todos/:id`     | Delete a todo          | Yes           |
-| GET    | `/tags`          | Get all tags           | Yes           |
+| Method | Endpoint                | Description                     | Auth Required |
+|--------|-------------------------|---------------------------------|---------------|
+| POST   | `/user/register`        | Register a new user             | No            |
+| POST   | `/user/login`           | Login with credentials          | No            |
+| POST   | `/user/refresh`         | Refresh access token            | No            |
+| POST   | `/user/logout`          | Logout and clear refresh token  | Yes           |
+| GET    | `/auth/google`          | Initiate Google OAuth 2.0 login | No            |
+| GET    | `/auth/google/callback` | Google OAuth callback           | No            |
+| GET    | `/todos`                | Get all todos for user          | Yes           |
+| POST   | `/todos`                | Create a new todo               | Yes           |
+| PATCH  | `/todos/:id`            | Update a todo                   | Yes           |
+| DELETE | `/todos/:id`            | Delete a todo                   | Yes           |
+| GET    | `/tags`                 | Get all tags                    | Yes           |
 
 ---
 
 ## Auth Flow
 
-1. User logs in and receives a short-lived **access token** and a long-lived **refresh token**
-2. Access token is sent in the `Authorization: Bearer <token>` header on every request
-3. When the access token expires, the client uses the refresh token to get a new one
-4. Logout clears the refresh token from the database
+**Email / Password**
+1. User registers or logs in with credentials
+2. Server returns a signed JWT access token and a refresh token stored in the database
+3. Access token is sent as `Authorization: Bearer <token>` on every request
+4. On expiry, the client exchanges the refresh token for a new access token
+5. Logout clears the refresh token from the database
+
+**Google OAuth 2.0**
+1. User clicks "Login with Google" and is redirected to Google's consent screen
+2. The callback URL is resolved dynamically — from `GOOGLE_CALLBACK_URL` env var, `RENDER_EXTERNAL_HOSTNAME` on Render, or the incoming request origin on localhost
+3. Google redirects back with an authorization code; Passport exchanges it for user info
+4. Server finds or creates the user by `googleId` and issues the same JWT tokens as the credentials flow
+5. If Google OAuth is not configured, the user is redirected with `?oauth=not_configured`
