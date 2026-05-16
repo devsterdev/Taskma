@@ -27,7 +27,14 @@ const googleOAuthConfig = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
 export const isGoogleOAuthConfigured = googleOAuthConfig !== null;
 
 if (!googleOAuthConfig) {
-  console.warn("Google OAuth is disabled because GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not configured.");
+  const missingVariables = [
+    ["GOOGLE_CLIENT_ID", GOOGLE_CLIENT_ID],
+    ["GOOGLE_CLIENT_SECRET", GOOGLE_CLIENT_SECRET],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+
+  console.warn(`Google OAuth is disabled. Missing environment variables: ${missingVariables.join(", ")}`);
 } else {
  
 passport.use(new GoogleStrategy(

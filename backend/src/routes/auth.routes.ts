@@ -36,9 +36,11 @@ const getGoogleCallbackUrl = (req: express.Request) => {
 
 const requireGoogleOAuthConfig: express.RequestHandler = (req, res, next) => {
   if (!isGoogleOAuthConfigured) {
-    return res.status(503).json({
-      message: "Google OAuth is not configured",
-    });
+    if (req.accepts("html")) {
+      return res.redirect(`${frontendUrl}/?oauth=not_configured`);
+    }
+
+    return res.status(503).json({ message: "Google OAuth is not configured" });
   }
 
   return next();

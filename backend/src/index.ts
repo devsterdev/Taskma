@@ -36,11 +36,8 @@ app.use('/auth', authRoutes)
 
 
 const PORT = Number(process.env.PORT) || 3000;
-const HOST =
-  process.env.HOST ||
-  (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
 
-app.listen(PORT, HOST, (error?: NodeJS.ErrnoException) => {
+app.listen(PORT, (error?: NodeJS.ErrnoException) => {
   if (error) {
     if (error.code === "EADDRINUSE") {
       console.error(
@@ -48,14 +45,14 @@ app.listen(PORT, HOST, (error?: NodeJS.ErrnoException) => {
       );
     } else if (error.code === "EPERM") {
       console.error(
-        `Permission denied while opening ${HOST}:${PORT}. Run the server in a normal terminal or free/retry port ${PORT}.`
+        `Permission denied while opening port ${PORT}. Run the server in a normal terminal or free/retry port ${PORT}.`
       );
     } else {
-      console.error(`Failed to start server on ${HOST}:${PORT}`, error);
+      console.error(`Failed to start server on port ${PORT}`, error);
     }
 
     process.exit(1);
   }
 
-  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 })
