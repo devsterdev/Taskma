@@ -14,6 +14,7 @@ const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replac
 
 const getGoogleCallbackUrl = (req: express.Request) => {
   const envCallbackUrl = process.env.GOOGLE_CALLBACK_URL;
+  const renderHostname = process.env.RENDER_EXTERNAL_HOSTNAME;
   const forwardedProto = req.headers["x-forwarded-proto"];
   const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
   const requestOrigin = `${protocol || req.protocol}://${req.get("host")}`;
@@ -22,7 +23,15 @@ const getGoogleCallbackUrl = (req: express.Request) => {
     return `${requestOrigin}/auth/google/callback`;
   }
 
-  return envCallbackUrl || `${requestOrigin}/auth/google/callback`;
+  if (envCallbackUrl) {
+    return envCallbackUrl;
+  }
+
+  if (renderHostname) {
+    return `https://${renderHostname}/auth/google/callback`;
+  }
+
+  return `${requestOrigin}/auth/google/callback`;
 };
 
 const requireGoogleOAuthConfig: express.RequestHandler = (req, res, next) => {

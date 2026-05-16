@@ -4,11 +4,23 @@ import type { Profile, VerifyCallback } from "passport-google-oauth20";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
 
+const getDefaultCallbackUrl = () => {
+  if (GOOGLE_CALLBACK_URL) {
+    return GOOGLE_CALLBACK_URL;
+  }
+
+  if (process.env.RENDER_EXTERNAL_HOSTNAME) {
+    return `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/auth/google/callback`;
+  }
+
+  return "/auth/google/callback";
+};
+
 const googleOAuthConfig = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
   ? {
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: GOOGLE_CALLBACK_URL || "/auth/google/callback",
+      callbackURL: getDefaultCallbackUrl(),
     }
   : null;
 
