@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Calendar, Check, CheckCircle2, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
+import React, { useRef, useState } from 'react'
+import { Check, CheckCircle2, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
 import { apiCall } from '../utils/api'
 
 interface Task {
@@ -35,8 +35,10 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
 }) => {
   const [expandedCompleted, setExpandedCompleted] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '' })
+  const [newTask, setNewTask] = useState({ title: '', description: '', tags: '' })
+  const [tagDraft, setTagDraft] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const tagInputRef = useRef<HTMLInputElement>(null)
 
   const panelClass = isDarkMode
     ? 'border-zinc-950 bg-[#121212] text-zinc-100'
@@ -47,12 +49,14 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
       ? 'border-zinc-700 bg-[#121212] text-zinc-100 placeholder-zinc-500 focus:border-zinc-400 focus:outline-none'
       : 'border-zinc-300 bg-white text-zinc-950 placeholder-zinc-400 focus:border-zinc-700 focus:outline-none'
   }`
-  const dateIconInputClass = `h-10 w-10 cursor-pointer rounded-md border text-transparent transition-colors [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 ${
+  const tagFieldClass = `flex min-h-[42px] w-full flex-wrap items-center gap-2 rounded-md border px-2.5 py-2 text-sm transition-colors ${
     isDarkMode
-      ? 'border-zinc-700 bg-[#121212] focus:border-zinc-400 focus:outline-none'
-      : 'border-zinc-300 bg-white focus:border-zinc-700 focus:outline-none'
+      ? 'border-zinc-700 bg-[#121212] text-zinc-100 focus-within:border-zinc-400'
+      : 'border-zinc-300 bg-white text-zinc-950 focus-within:border-zinc-700'
   }`
-  const dateIconClass = isDarkMode ? 'text-zinc-300' : 'text-zinc-700'
+  const tagPillClass = `inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-sm ${
+    isDarkMode ? 'bg-zinc-800 text-zinc-100' : 'bg-zinc-200 text-zinc-800'
+  }`
 
   const formatCompletedDate = (task: Task) => {
     const dateValue = task.updatedAt || task.createdAt
@@ -79,6 +83,133 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
     const day = String(today.getDate()).padStart(2, '0')
 
     return `${year}-${month}-${day}`
+  }
+
+  const normalizeTagName = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z]/g, '')
+
+  const getTagList = (tags: string) =>
+    tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(Boolean)
+
+  const serializeTags = (tags: string[]) => tags.join(', ')
+
+  const addTagsToValue = (currentTags: string, nextTags: string[]) => {
+    const existingTags = getTagList(currentTags)
+    const mergedTags = [...existingTags]
+
+    nextTags.forEach(tag => {
+      const normalizedTag = normalizeTagName(tag)
+
+      if (normalizedTag && normalizedTag !== 'today' && !mergedTags.includes(normalizedTag)) {
+        mergedTags.push(normalizedTag)
+      }
+    })
+
+    return serializeTags(mergedTags)
+  }
+
+  const removeTagFromValue = (currentTags: string, tagToRemove: string) =>
+    serializeTags(getTagList(currentTags).filter(tag => tag !== tagToRemove))
+
+  const commitTagDraft = () => {
+    setNewTask(prev => ({
+      ...prev,
+      tags: addTagsToValue(prev.tags, [tagDraft])
+    }))
+    setTagDraft('')
+  }
+
+  const handleTagDraftChange = (value: string) => {
+    const parts = value.split(',')
+
+    if (parts.length === 1) {
+      setTagDraft(normalizeTagName(value))
+      return
+    }
+
+    const tagsToAdd = parts.slice(0, -1)
+    const nextDraft = normalizeTagName(parts[parts.length - 1])
+
+    setNewTask(prev => ({
+      ...prev,
+      tags: addTagsToValue(prev.tags, tagsToAdd)
+    }))
+    setTagDraft(nextDraft)
+  }
+
+  const handleTagKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault()
+      commitTagDraft()
+      return
+    }
+
+    if (event.key === 'Backspace' && !tagDraft) {
+      const tags = getTagList(newTask.tags)
+
+      if (tags.length === 0) {
+        return
+      }
+
+      event.preventDefault()
+      setNewTask(prev => ({
+        ...prev,
+        tags: serializeTags(tags.slice(0, -1))
+      }))
+    }
+  }
+
+  const handleRemoveTag = (tag: string) => {
+    setNewTask(prev => ({
+      ...prev,
+      tags: removeTagFromValue(prev.tags, tag)
+    }))
+    tagInputRef.current?.focus()
+  }
+
+  const renderTagField = () => {
+    const tags = getTagList(newTask.tags)
+
+    return (
+      <div className={tagFieldClass} onClick={() => tagInputRef.current?.focus()}>
+        <span className={tagPillClass}>today</span>
+        {tags.map(tag => (
+          <span key={tag} className={tagPillClass}>
+            {tag}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                handleRemoveTag(tag)
+              }}
+              className={`rounded-full p-0.5 transition-colors ${
+                isDarkMode ? 'hover:bg-zinc-700' : 'hover:bg-zinc-300'
+              }`}
+              aria-label={`Remove ${tag} tag`}
+            >
+              <X size={13} />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={tagInputRef}
+          type="text"
+          value={tagDraft}
+          onChange={event => handleTagDraftChange(event.target.value)}
+          onKeyDown={handleTagKeyDown}
+          onBlur={commitTagDraft}
+          placeholder={tags.length === 0 ? 'Add a tag...' : ''}
+          className={`min-w-[120px] flex-1 border-0 bg-transparent p-0 text-sm outline-none ${
+            isDarkMode ? 'text-zinc-100 placeholder-zinc-500' : 'text-zinc-950 placeholder-zinc-400'
+          }`}
+        />
+      </div>
+    )
   }
 
   const formatDueDate = (value?: string | null) => {
@@ -120,7 +251,8 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
       return
     }
 
-    const dueDate = newTask.dueDate || getTodayDateInputValue()
+    const dueDate = getTodayDateInputValue()
+    const tags = Array.from(new Set(['today', ...getTagList(addTagsToValue(newTask.tags, [tagDraft]))]))
     const temporaryTaskId = -Date.now()
     const optimisticTask: Task = {
       id: temporaryTaskId,
@@ -129,11 +261,15 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
       dueDate,
       completed: false,
       userId: 0,
-      tags: [{ id: temporaryTaskId - 1, name: 'today' }]
+      tags: tags.map((tag, index) => ({
+        id: temporaryTaskId - index - 1,
+        name: tag
+      }))
     }
 
     onTaskCreateStart?.(optimisticTask)
-    setNewTask({ title: '', description: '', dueDate: '' })
+    setNewTask({ title: '', description: '', tags: '' })
+    setTagDraft('')
     setShowAddForm(false)
     setIsCreating(true)
 
@@ -144,7 +280,7 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
           title: optimisticTask.title,
           description: optimisticTask.description,
           dueDate: optimisticTask.dueDate,
-          tags: ['today']
+          tags
         })
       })
 
@@ -172,10 +308,7 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
 
         <button
           type="button"
-          onClick={() => {
-            setNewTask(prev => ({ ...prev, dueDate: prev.dueDate || getTodayDateInputValue() }))
-            setShowAddForm(true)
-          }}
+          onClick={() => setShowAddForm(true)}
           className={`mb-4 flex items-center gap-4 text-sm transition-colors ${
             isDarkMode ? 'text-blue-200 hover:text-white' : 'text-zinc-700 hover:text-black'
           }`}
@@ -209,32 +342,27 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
                 placeholder="Task title"
                 className={inputClass}
               />
-              <textarea
-                value={newTask.description}
-                onChange={event => setNewTask(prev => ({ ...prev, description: event.target.value }))}
-                placeholder="Optional note"
-                rows={2}
-                className={`${inputClass} resize-none`}
-              />
-              <div className="flex items-center gap-3">
-                <label className="flex shrink-0 items-center gap-2 text-sm" title="Choose due date">
-                  <span className="relative flex h-10 w-10 items-center justify-center">
-                    <Calendar size={17} className={`pointer-events-none absolute ${dateIconClass}`} />
-                    <input
-                      type="date"
-                      value={newTask.dueDate}
-                      onChange={event => setNewTask(prev => ({ ...prev, dueDate: event.target.value }))}
-                      className={dateIconInputClass}
-                      aria-label="Choose due date"
-                    />
-                  </span>
-                  <span className={mutedClass}>Due date</span>
-                </label>
-              </div>
+              <label className="block space-y-1.5">
+                <span className={`text-xs font-medium ${mutedClass}`}>Description</span>
+                <textarea
+                  value={newTask.description}
+                  onChange={event => setNewTask(prev => ({ ...prev, description: event.target.value }))}
+                  placeholder="Optional note"
+                  rows={2}
+                  className={`${inputClass} resize-none`}
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className={`text-xs font-medium ${mutedClass}`}>Tags</span>
+                {renderTagField()}
+              </label>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(false)}
+                  onClick={() => {
+                    setShowAddForm(false)
+                    setTagDraft('')
+                  }}
                   disabled={isCreating}
                   className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                     isDarkMode ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
@@ -309,7 +437,7 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
           )}
         </div>
 
-        <section className="shrink-0 pt-3">
+        <section className="flex min-h-0 flex-1 flex-col pt-3">
           <button
             type="button"
             onClick={() => setExpandedCompleted(!expandedCompleted)}
@@ -322,7 +450,7 @@ const TodayPanel: React.FC<TodayPanelProps> = ({
           </button>
 
           {expandedCompleted && (
-            <div className="max-h-40 overflow-y-auto pb-1">
+            <div className="min-h-0 flex-1 overflow-y-auto pb-1">
               {completedTasks.length === 0 ? (
                 <p className={`py-2 pl-7 text-sm ${mutedClass}`}>No completed tasks yet.</p>
               ) : (

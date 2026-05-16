@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Calendar, Check, Edit, MoreVertical, Plus, Trash2, X } from 'lucide-react'
 import { apiCall } from '../utils/api'
+import DeleteTaskDialog from './DeleteTaskDialog'
 
 interface Task {
   id: number
@@ -48,6 +49,7 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null)
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null)
 
   const menuRef = useRef<HTMLDivElement>(null)
   const tagInputRef = useRef<HTMLInputElement>(null)
@@ -512,25 +514,38 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
     }
   }
 
-  const handleDelete = async (taskId: number) => {
-    if (confirm('Are you sure you want to delete this task?')) {
-      setDeletingTaskId(taskId)
-      try {
-        const response = await apiCall(`/todo/delete/${taskId}`, {
-          method: 'DELETE'
-        })
+  const requestDelete = (task: Task) => {
+    setTaskPendingDelete(task)
+    setMenuOpenTaskId(null)
+  }
 
-        if (response.ok) {
-          await onTaskCreated()
-        } else {
-          console.error('Failed to delete task')
-        }
-      } catch (error) {
-        console.error('Error deleting task:', error)
-      } finally {
-        setDeletingTaskId(null)
-        setMenuOpenTaskId(null)
+  const cancelDelete = () => {
+    if (deletingTaskId === null) {
+      setTaskPendingDelete(null)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!taskPendingDelete || deletingTaskId !== null) {
+      return
+    }
+
+    setDeletingTaskId(taskPendingDelete.id)
+    try {
+      const response = await apiCall(`/todo/delete/${taskPendingDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setTaskPendingDelete(null)
+        await onTaskCreated()
+      } else {
+        console.error('Failed to delete task')
       }
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    } finally {
+      setDeletingTaskId(null)
     }
   }
 
@@ -550,6 +565,16 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
 
   return (
     <div className={`flex-1 overflow-y-auto border-r px-5 py-5 ${pageClass}`}>
+      {taskPendingDelete && (
+        <DeleteTaskDialog
+          isDarkMode={isDarkMode}
+          isDeleting={deletingTaskId === taskPendingDelete.id}
+          taskTitle={taskPendingDelete.title}
+          onCancel={cancelDelete}
+          onConfirm={confirmDelete}
+        />
+      )}
+
       <div className="mb-5">
         <h2 className="text-lg font-normal">{title}</h2>
       </div>
@@ -770,7 +795,7 @@ const AllTasks = React.forwardRef<AllTasksHandle, AllTasksProps>(({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(task.id)}
+                    onClick={() => requestDelete(task)}
                     disabled={deletingTaskId === task.id}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
                       isDarkMode ? 'text-red-300 hover:bg-zinc-800' : 'text-red-600 hover:bg-red-50'

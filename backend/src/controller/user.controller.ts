@@ -35,13 +35,13 @@ const generateAccessAndRefreshTokens = (userId: number) => {
   const accessToken = jwt.sign(
     { userId },
     accessTokenSecret,
-    { expiresIn: "1h" }
+    { expiresIn: "15d" }
   );
 
   const refreshToken = jwt.sign(
     { userId },
     refreshTokenSecret,
-    { expiresIn: "7d" }
+    { expiresIn: "300d" }
   );
 
   return { accessToken, refreshToken };
