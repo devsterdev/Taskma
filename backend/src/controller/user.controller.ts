@@ -53,7 +53,8 @@ const registerUser = async (req: Request, res: Response) => {
     return res
     .cookie("accessToken", accessToken, {
       ...cookieOptions,
-      maxAge: 60 * 60 * 1000 // 1 hour
+      maxAge: 60 * 60 * 1000, // 1 hour
+      path: "/",
     })
 
     .cookie("refreshToken", refreshToken, {
@@ -91,14 +92,14 @@ const signInUser = async(req: Request, res: Response) => {
   if (
     [email].some((field) => field?.trim() === "")
   ) {
-    return res.json({
+    return res.status(400).json({
       message: "all fields require"
     })
   }
   try{
     const existedUser = await findUserByEmail(email)
     if(!existedUser){
-      return res.json({
+      return res.status(400).json({
         message: "User don't exist"
       })
     }
@@ -122,7 +123,8 @@ const signInUser = async(req: Request, res: Response) => {
     return res
     .cookie("accessToken", accessToken, {
       ...cookieOptions,
-      maxAge: 60 * 60 * 1000 // 1 hour
+      maxAge: 60 * 60 * 1000, // 1 hour
+      path: "/",
     })
 
     .cookie("refreshToken", refreshToken, {

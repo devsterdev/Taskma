@@ -13,7 +13,9 @@ const getDefaultCallbackUrl = () => {
     return `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/auth/google/callback`;
   }
 
-  return "/auth/google/callback";
+  throw new Error(
+  "Google callback URL is not configured"
+);
 };
 
 const googleOAuthConfig = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
