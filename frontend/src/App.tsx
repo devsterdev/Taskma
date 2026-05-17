@@ -17,35 +17,93 @@ function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
 
-  useEffect(() => {
-    const validateSession = async () => {
-      try {
-        const response = await apiCall('/user/profile', {
-          method: 'GET',
-        })
+ useEffect(() => {
 
-        if (response.ok) {
-          const data = await response.json()
-          setCurrentUser(data.user)
-          localStorage.setItem('currentUser', JSON.stringify(data.user))
-          setCurrentPage('home')
-        } else {
-          localStorage.removeItem('currentUser')
-          setCurrentUser(null)
-          setCurrentPage('auth')
+  const validateSession = async () => {
+
+    try {
+
+      const response = await apiCall(
+        '/user/profile',
+        {
+          method: 'GET',
         }
-      } catch (error) {
-        console.error('Session validation failed:', error)
-        localStorage.removeItem('currentUser')
+      )
+
+      if (response.ok) {
+
+        const data =
+          await response.json()
+
+        setCurrentUser(data.user)
+
+        localStorage.setItem(
+          'currentUser',
+          JSON.stringify(data.user)
+        )
+
+        setCurrentPage('home')
+
+      } else {
+
+        localStorage.removeItem(
+          'currentUser'
+        )
+
         setCurrentUser(null)
+
         setCurrentPage('auth')
-      } finally {
-        setIsLoading(false)
       }
+
+    } catch (error) {
+
+      console.error(
+        'Session validation failed:',
+        error
+      )
+
+      localStorage.removeItem(
+        'currentUser'
+      )
+
+      setCurrentUser(null)
+
+      setCurrentPage('auth')
+
+    } finally {
+
+      setIsLoading(false)
     }
+  }
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    )
+
+  const oauth =
+    params.get("oauth")
+
+  if (oauth === "success") {
+
+    setTimeout(() => {
+
+      validateSession()
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      )
+
+    }, 200)
+
+  } else {
 
     validateSession()
-  }, [])
+  }
+
+}, [])
 
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light')
