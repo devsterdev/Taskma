@@ -5,6 +5,7 @@ import { findUserByUserId } from '../db/user.db.js';
 
 export const verifyJWT = async (req: Request, res: Response, next:NextFunction) => {
   try{
+    console.log("Cookies:", req.cookies);
     const token = req.cookies?.accessToken
     if(!token){
       return res.status(401).

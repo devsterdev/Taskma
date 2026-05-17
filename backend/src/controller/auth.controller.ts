@@ -17,10 +17,14 @@ const getCookieOptions = (req: Request): CookieOptions => {
     !isLocalhost;
 
   return {
-    httpOnly: true,
-    secure: isHttpsRequest,
-    sameSite: isHttpsRequest ? "none" : "lax",
-  };
+  httpOnly: true,
+  secure: isHttpsRequest,
+  sameSite: isHttpsRequest ? "none" : "lax",
+  domain: isHttpsRequest
+    ? "taskma-p59o.onrender.com"
+    : undefined,
+  path: "/",
+};
 };
 
 export const googleCallback = async (req: Request, res: Response) => {

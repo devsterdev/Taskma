@@ -12,10 +12,14 @@ const getCookieOptions = (req: Request): CookieOptions => {
     req.hostname !== "localhost";
 
   return {
-    httpOnly: true,
-    secure: isHttpsRequest,
-    sameSite: isHttpsRequest ? "none" : "lax",
-  };
+  httpOnly: true,
+  secure: isHttpsRequest,
+  sameSite: isHttpsRequest ? "none" : "lax",
+  domain: isHttpsRequest
+    ? "taskma-p59o.onrender.com"
+    : undefined,
+  path: "/",
+};
 };
 
 const registerUser = async (req: Request, res: Response) => {
